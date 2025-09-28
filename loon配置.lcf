@@ -1,0 +1,140 @@
+# Loon 最小配置
+# Date: 2025-09-08 22:34:27
+# Author: https://t.me/iKeLee
+# 更多插件可前往 https://hub.kelee.one 安装
+
+[General]
+ip-mode = v4-only
+ipv6-vif = off
+dns-server = system
+sni-sniffing = true
+disable-stun = false
+dns-reject-mode = LoopbackIP
+domain-reject-mode = DNS
+udp-fallback-mode = REJECT
+wifi-access-http-port = 7222
+wifi-access-socks5-port = 7221
+allow-wifi-access = false
+interface-mode = auto
+test-timeout = 5
+disconnect-on-policy-change = false
+internet-test-url = http://connectivitycheck.platform.hicloud.com/generate_204
+proxy-test-url = http://www.gstatic.com/generate_204
+resource-parser = https://raw.githubusercontent.com/sub-store-org/Sub-Store/release/sub-store-parser.loon.min.js
+geoip-url = https://geodata.kelee.one/Country-Masaiki.mmdb
+ipasn-url = https://geodata.kelee.one/GeoLite2-ASN-P3TERX.mmdb
+skip-proxy = 192.168.0.0/16,10.0.0.0/8,172.16.0.0/12,localhost,*.local,e.crashlynatics.com
+bypass-tun = 10.0.0.0/8,100.64.0.0/10,127.0.0.0/8,169.254.0.0/16,172.16.0.0/12,192.0.0.0/24,192.0.2.0/24,192.88.99.0/24,192.168.0.0/16,198.51.100.0/24,203.0.113.0/24,224.0.0.0/4,255.255.255.255/32
+
+[Proxy]
+
+[Remote Proxy]
+闪电 = https://times1758104707.subxiandan.top:9604/v2b/shandian/api/v1/client/subscribe?token=bae01f0e62697c9934d8b00d6b758a0d,udp=true,block-quic=true,fast-open=default,vmess-aead=true,skip-cert-verify=true,enabled=true,flexible-sni=false
+
+[Remote Filter]
+香港节点 = NameRegex, FilterKey = "^(?=.*((?i)🇭🇰|香港|(\b(HK|HKG|Hong)(\d+)?\b)))(?!.*((?i)回国|校园|游戏|🎮|(\b(GAME)\b))).*$"
+台湾节点 = NameRegex, FilterKey = "^(?=.*((?i)🇹🇼|台湾|(\b(TW|TWN|Tai|Taiwan)(\d+)?\b)))(?!.*((?i)回国|校园|游戏|🎮|(\b(GAME)\b))).*$"
+日本节点 = NameRegex, FilterKey = "^(?=.*((?i)🇯🇵|日本|川日|东京|大阪|泉日|埼玉|(\b(JP|JPN|Japan)(\d+)?\b)))(?!.*((?i)回国|校园|游戏|🎮|(\b(GAME)\b))).*$"
+韩国节点 = NameRegex, FilterKey = "^(?=.*((?i)🇰🇷|韩国|韓|首尔|(\b(KR|KOR|Korea)(\d+)?\b)))(?!.*((?i)回国|校园|游戏|🎮|(\b(GAME)\b))).*$"
+新国节点 = NameRegex, FilterKey = "^(?=.*((?i)🇸🇬|新加坡|狮|(\b(SG|SGP|Singapore)(\d+)?\b)))(?!.*((?i)回国|校园|游戏|🎮|(\b(GAME)\b))).*$"
+美国节点 = NameRegex, FilterKey = "^(?=.*((?i)🇺🇸|美国|波特兰|达拉斯|俄勒冈|凤凰城|费利蒙|硅谷|拉斯维加斯|洛杉矶|圣何塞|圣克拉拉|西雅图|芝加哥|(\b(US|USA|United States)(\d+)?\b)))(?!.*((?i)回国|校园|游戏|🎮|(\b(GAME)\b))).*$"
+游戏节点 = NameRegex, FilterKey = "^(?=.*((?i)游戏|🎮|(\b(GAME)(\d+)?\b)))(?!.*((?i)回国|校园)).*$"
+全球节点 = NameRegex, FilterKey = "^(?=.*(.))(?!.*((?i)群|邀请|返利|循环|官网|客服|网站|网址|获取|订阅|流量|到期|机场|下次|版本|官址|备用|过期|已用|联系|邮箱|工单|贩卖|通知|倒卖|防止|国内|地址|频道|无法|说明|使用|提示|特别|访问|支持|教程|关注|更新|作者|加入|超时|收藏|福利|邀请|好友|(\b(USE|USED|TOTAL|EXPIRE|EMAIL|Panel|Channel|Author|Traffic)(\d+)?\b|(\d{4}-\d{2}-\d{2}|\dG)))).*$"
+
+[Proxy Group]
+# 手动策略组
+香港手动策略 = select,香港节点,img-url = https://raw.githubusercontent.com/Orz-3/mini/master/Color/HK.png
+台湾手动策略 = select,台湾节点,img-url = https://raw.githubusercontent.com/Orz-3/mini/master/Color/TW.png
+日本手动策略 = select,日本节点,img-url = https://raw.githubusercontent.com/Orz-3/mini/master/Color/JP.png
+韩国手动策略 = select,韩国节点,img-url = https://raw.githubusercontent.com/Orz-3/mini/master/Color/KR.png
+新国手动策略 = select,新国节点,img-url = https://raw.githubusercontent.com/Orz-3/mini/master/Color/SG.png
+美国手动策略 = select,美国节点,img-url = https://raw.githubusercontent.com/Orz-3/mini/master/Color/US.png
+游戏手动策略 = select,游戏节点,img-url = https://raw.githubusercontent.com/Orz-3/mini/master/Color/GAME.png
+全球手动策略 = select,全球节点,img-url = https://raw.githubusercontent.com/Orz-3/mini/master/Color/Global.png
+# --------------------------------
+# 时延优选策略组
+香港时延优选 = url-test,香港节点,interval = 60,tolerance = 50,img-url = https://raw.githubusercontent.com/Orz-3/mini/master/Color/HK.png
+台湾时延优选 = url-test,台湾节点,interval = 60,tolerance = 50,img-url = https://raw.githubusercontent.com/Orz-3/mini/master/Color/TW.png
+日本时延优选 = url-test,日本节点,interval = 60,tolerance = 50,img-url = https://raw.githubusercontent.com/Orz-3/mini/master/Color/JP.png
+韩国时延优选 = url-test,韩国节点,interval = 60,tolerance = 50,img-url = https://raw.githubusercontent.com/Orz-3/mini/master/Color/KR.png
+新国时延优选 = url-test,新国节点,interval = 60,tolerance = 50,img-url = https://raw.githubusercontent.com/Orz-3/mini/master/Color/SG.png
+美国时延优选 = url-test,美国节点,interval = 60,tolerance = 50,img-url = https://raw.githubusercontent.com/Orz-3/mini/master/Color/US.png
+# --------------------------------
+# 兜底策略后备
+兜底后备策略 = fallback,香港时延优选,台湾时延优选,日本时延优选,韩国时延优选,新国时延优选,美国时延优选,interval = 60,max-timeout = 2000,img-url = https://github.com/shindgewongxj/WHATSINStash/raw/main/icon/fallback.png
+
+[Rule]
+# Local Rule
+# Type:DOMAIN-SUFFIX,DOMAIN,DOMAIN-KEYWORD,USER-AGENT,URL-REGEX,IP-CIDR,IP-CIDR6,IP-ASN
+# Strategy:DIRECT,Proxy,REJECT
+# Options:no-resolve(no-resolve(only for cidr))
+# IP-CIDR, 192.168.0.0/16, DIRECT
+# IP-CIDR, 10.0.0.0/8, DIRECT
+# IP-CIDR, 172.16.0.0/12, DIRECT
+# IP-CIDR, 127.0.0.0/8, DIRECT
+# 配置文件已自带远程GEOIP, cn, DIRECT规则，请勿在此添加
+# 请勿修改远程CN REGION规则的排序甚至删除
+FINAL,兜底后备策略
+
+[Remote Rule]
+https://rule.kelee.one/Loon/Telegram.lsr, policy=香港时延优选, tag=Telegram, enabled=true
+https://kelee.one/Tool/Loon/Lsr/TikTok.lsr, policy=美国时延优选, tag=TikTok, enabled=true
+https://kelee.one/Tool/Loon/Lsr/AI.lsr, policy=台湾时延优选, tag=AI, enabled=true
+https://kelee.one/Tool/Loon/Lsr/SpeedtestInternational.lsr, policy=全球手动策略, tag=Speedtest Intl, enabled=false
+https://kelee.one/Tool/Loon/Lsr/AppleAccount.lsr, policy=DIRECT, tag=Apple Account, enabled=true
+https://kelee.one/Tool/Loon/Lsr/AppStore.lsr, policy=DIRECT, tag=App Store, enabled=false
+https://rule.kelee.one/Loon/GitHub.lsr, policy=兜底后备策略, tag=GitHub, enabled=true
+https://rule.kelee.one/Loon/Netflix.lsr, policy=台湾时延优选, tag=Netflix, enabled=true
+https://rule.kelee.one/Loon/YouTube.lsr, policy=香港时延优选, tag=Youtube, enabled=true
+https://rule.kelee.one/Loon/Disney.lsr, policy=香港手动策略, tag=Disney, enabled=true
+https://rule.kelee.one/Loon/Twitter.lsr, policy=兜底后备策略, tag=Twitter, enabled=true
+https://rule.kelee.one/Loon/Facebook.lsr, policy=香港手动策略, tag=Facebook, enabled=true
+https://rule.kelee.one/Loon/Instagram.lsr, policy=兜底后备策略, tag=Instagram, enabled=true
+https://rule.kelee.one/Loon/Spotify.lsr, policy=香港手动策略, tag=Spotify, enabled=true
+https://rule.kelee.one/Loon/Google.lsr, policy=兜底后备策略, tag=Google, enabled=true
+https://rule.kelee.one/Loon/OneDrive.lsr, policy=兜底后备策略, tag=OneDrive, enabled=true
+https://kelee.one/Tool/Loon/Lsr/LAN_SPLITTER.lsr, policy=DIRECT, tag=LAN, enabled=true
+https://kelee.one/Tool/Loon/Lsr/REGION_SPLITTER.lsr, policy=DIRECT, tag=CN REGION, enabled=true
+
+[Host]
+
+[Rewrite]
+
+[Script]
+
+[Plugin]
+https://kelee.one/Tool/Loon/Lpx/YouTubeSubtitlesTranslation.lpx, tag=YouTube双语翻译, enabled=true
+https://kelee.one/Tool/Loon/Lpx/YouTube_remove_ads.lpx, tag=YouTube去广告, enabled=true
+https://kelee.one/Tool/Loon/Lpx/WexinMiniPrograms_Remove_ads.lpx, tag=微信小程序去广告, enabled=true
+https://kelee.one/Tool/Loon/Lpx/PinDuoDuo_remove_ads.lpx, tag=拼多多去广告, enabled=true
+https://kelee.one/Tool/Loon/Lpx/JD_Price.lpx, tag=京东比价, enabled=true
+https://kelee.one/Tool/Loon/Lpx/DragonRead_remove_ads.lpx, tag=番茄小说去广告, enabled=true
+https://kelee.one/Tool/Loon/Lpx/BaiduNetDisk_remove_ads.lpx, tag=百度网盘去广告, enabled=true
+https://kelee.one/Tool/Loon/Lpx/Switch_github_mirror.lpx, tag=github加速, enabled=true
+https://kelee.one/Tool/Loon/Lpx/AppleWeatherEnhancer.lpx, tag=苹果天气, enabled=true
+https://kelee.one/Tool/Loon/Lpx/555DY_remove_ads.lpx, tag=555去广告, enabled=true
+http://script.hub/file/_start_/https://raw.githubusercontent.com/Yu9191/Rewrite/refs/heads/main/jvid.js/_end_/jvid.plugin?type=qx-rewrite&target=loon-plugin&del=true&jqEnabled=true, tag=jdiv, enabled=true
+http://script.hub/file/_start_/https://raw.githubusercontent.com/WeiGiegie/666/main/lrts.js/_end_/lrts.plugin?type=qx-rewrite&target=loon-plugin&del=true&jqEnabled=true, tag=懒人听书, enabled=true
+http://script.hub/file/_start_/https://raw.githubusercontent.com/WeiGiegie/666/main/byhz.js/_end_/byhz.plugin?type=qx-rewrite&target=loon-plugin&del=true&jqEnabled=true, tag=鲍鱼, enabled=true
+http://script.hub/file/_start_/https://raw.githubusercontent.com/WeiGiegie/666/main/wangyiyun.js/_end_/wangyiyun.plugin?type=qx-rewrite&target=loon-plugin&del=true&jqEnabled=true, tag=网易云音乐, enabled=true
+http://script.hub/file/_start_/https://raw.githubusercontent.com/WeiGiegie/666/main/bdyy.js/_end_/bdyy.plugin?type=qx-rewrite&target=loon-plugin&del=true&jqEnabled=true, tag=波点音乐, enabled=true
+http://script.hub/file/_start_/https://raw.githubusercontent.com/WeiGiegie/666/main/ximalayajisuban.js/_end_/ximalayajisuban.plugin?type=qx-rewrite&target=loon-plugin&del=true&jqEnabled=true, tag=极速喜马拉雅, enabled=true
+https://kelee.one/Tool/Loon/Lpx/LoonGallery.lpx, policy=兜底后备策略, enabled=true
+https://kelee.one/Tool/Loon/Lpx/Block_HTTPDNS.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/BlockAdvertisers.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/Remove_ads_by_keli.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/QuickSearch.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/Prevent_DNS_Leaks.lpx, policy=兜底后备策略, enabled=true
+https://kelee.one/Tool/Loon/Lpx/Node_detection_tool.lpx, enabled=true
+https://kelee.one/Tool/Loon/Lpx/TestFlightRegionUnlock.lpx, policy=DIRECT, enabled=false
+https://kelee.one/Tool/Loon/Lpx/BoxJs.lpx, policy=兜底后备策略, enabled=true
+https://kelee.one/Tool/Loon/Lpx/Sub-Store.lpx, policy=兜底后备策略, enabled=true
+https://kelee.one/Tool/Loon/Lpx/Script-Hub.lpx, policy=兜底后备策略, enabled=true
+
+[Mitm]
+ca-p12 = MIIJdQIBAzCCCT8GCSqGSIb3DQEHAaCCCTAEggksMIIJKDCCA98GCSqGSIb3DQEHBqCCA9AwggPMAgEAMIIDxQYJKoZIhvcNAQcBMBwGCiqGSIb3DQEMAQYwDgQIn3ODZY6LAtQCAggAgIIDmLv1KsnlzmKYtcZFKEKELCed0m2z5q4eHcgmprFIfJic1pvBYPRbWgMBe0C5q/fHzwJUXHrjDr7efuoK30FV2M5ISlnKxLIMQ2DPPdnaqXtnfLzvg+YgtTEYjvRAXm6aFaUMWZU16NzEhQvfdmMMxic03PPW/jDHEjpX2KKhDTyFTQztuxYVbpCN8W/aHUGxmqSzG4K+zFNUq1ttxVAhLloYyS2u/+kPoPM3KwhUG8CSdq1vfVtGcAqog0wgls0/o5eVNaIZkEs59JLldYbJan93x60aRGla+YJz7P8HoZtgLOZa5JWanDU7lJ0lsmkuRlbGpjiA32lXqPj1SoQsKb/R/5yvfvEcHJmmQmffB0rWQCVcDARlxR//xOqS98brTK4EdOBqexwhMlpQ70U/DGUvO2EglbGk4oxGBu/GjW/z7D/trKhgcWKDffOjAwphHwhyk/JubHlOnC8vJ1U+OmzOLC2EKO4vbJzhiSfzq8Ia42FNpqB84x/hv5hDkVZc1ZHfCnWkHzhEk1iZXu2DddOa8FjDdOWhWdkWow88bmtfBO1FiPufcKTcfyguCzyOn5nbM9+oWDd4loY+7IeA6i2wCx4yLrGag8of4HD69aEFNu8DAiyv/Sojo2rqszTbUEN1nhiMaZJ4U1/i6muiouPFNY7PISo7HaVK/wD0IVxjPC+IkfNRGe6F0zUtfDHcG/3O9HNJIEEXd1QE5uU3BLKD+NcM0lW0imlspeA/XNimIfdFN+cewJZ+agMWvr39GEwUM4irOSDlimc/Ac/S4jCxAIQy0VgjobZTqxn3hq6JGUX45U5h1lVjwfp18xjSB2q1USpKigc5LRwRN+if0mqdN1oC/obasIlttNwyN7PJrLTcZGvF2UKIDYie1WKGK9EwnqYnbidjnOaioIlmwP22VLZ79sR/EGKD/6MSKzZvJFzf3JNyo428XA7icXXPn4iiGLiJnduffWRuFmuAt22RPTd+fvDUvmyt1fCyQGtmY/kbdKcYyiyp6NqmM2x2KiSy0+lZBC7QfY1cxWjjKOcX+IrTaB1BQOPfKnHP0f/cd07Cdp8+V1QvBMaFkURbu5Tad9ErufeU5sWuNtHUY8zMQGq6DFmVuDeHaaWc6u1ItTZLF3pZe5/1P4DLPAKUlgDuSMbRqhpga0Oa4hN8Qby1rfYiYqD3zOTfP5VkHi3bVzC5YjAl7cP/5BrXixGp6PIQks+7CsmDMIIFQQYJKoZIhvcNAQcBoIIFMgSCBS4wggUqMIIFJgYLKoZIhvcNAQwKAQKgggTuMIIE6jAcBgoqhkiG9w0BDAEDMA4ECEAVOqeRF3GLAgIIAASCBMjCq5ixtsDHNG89J+3QEnYeEY+KRSi+uGu68ILXjFXlOsVYKFiVB3HZtRmXBAjyYEv2mLVSKlSRand5RNSkKxzcBQuv5hY6CM4gtShzPEbVw2sdXtyiZV2lNCJDTkjU6ERPJ9iTPWgqv3qEkUYkHP8Uv1xGC18PI+K/8IQdFzyc7zaZw4x3u3CXah9cI9xVwRyJ22O0YzjDTFwLta7YGsRCwA1hi2EahqN2UZTHl0FgSZ1Z5AFNEXPM/tjjK2/vUsmCA6TXIJT81Jmc7/U8rYbXgVvnT1kedcQHBPL8u9SHb0LlyHwom5RwWClvr+g+RpBYi4bEPcYsiNApoLMxSyNnuT9CPgyRTcXW8YQSDuDGLrlVacZr5zlxsE3fP7qgyIkCLKQAYYuEiNJhSmCl3FlnwxpzNfpP0pM0C4rR5ZNygL97kRBRNI0L7NceuO5hldttzIKawLx3z4y3Wi8b+BVXzeek2d3/QyfcuZjSouMIHkSpW7CIf9/BKcKCD3g1OuHZOitT2XyO03F5PKxO6yThWQCUrhF1rfU4hnL3fjxCXV477DnCQ48U+hhyo4+7Ol40PF60AiHCSI3k3N7LY02FnLDovp3GW3est6ubLb3etqc4CWRUXlsiAW4y3/3YXZyqYsJl8zay5EBTDET4K2XNiS2EDnRUx+VSMqzmHhfBvTzF1AQXWv/aMF5SjIRJOZ0a9YuT4qVvFeD7xzt/Tk/cEqg8D0Yy1eiLxIKEoIsTHMGsZI7MJWwgAiVpvwCGNbNxx+9OkOClv5aD7+aMMWaYe0WEYgFfAZ6WImn6Aix7GidX4i5CgiRpZ740iVWrxyK2kj29h9Wk40byqnoM5rBIWVE/3c/w6RAqR+hI5dcAvVBuUKWoS5vCen/XLOYlfJAfMISDpOffT8ouJDdajUGUTnf7gy4mTpG8nxsSwVrhPq01HUZATMRk+aD7Fpcz2ZpNp88yF9G9FMTIb205wpRdUlyioTAIHo+DXIkU3cBrJdFiMti2gpBL0hxr3lv422k+jVu+ATaw7Lxs/QuWQNb1rz2Sx9FnLTuH0jUgS0gfSgSGfI17kJCqUQomCTC1FbelXEQCqfoeNEdJfLFZKj1gfOaN70k4L/lBK1Ee/rzbJYkE8Fxmljqs0SskyE/oeZkzZeUOa8CfBmIr4FG9cpcIXjheWYC5CnGDLbA6YM7f2Wc1/XLd3KWN2Veuv4iydaavB/QKB3i4VAEE6P5BkjoZLSZ9kSIi25uJom25QV8JDyAOQ+NwjY9R9aLAeTwMNG9G5bobEQGyaRYd2MWwIJS93O3hK4ugkzUeeJby1aUTHctYZlm5nCk7mlC4ik6SZkv6XQG3DtLx9GXrZfS5bM7VCH8PnIu2+xiQ5AXJnL6KEFMx/aZbADNVHTvAWpGD8Rc7q/nosbvTP1fDcByAxe3Sjlp/Pn97J4+mg0G91+ZQvePF8AhoxCugPRP+l8i0SwJBw2QfWwiLW2yMZMqgpipYTqpqM/4UCR3DPn5EkRbpNpEcZHbjJC2NNfSKtFlGohXsRX20J9HCNg1i6/yq/U8yUr/57CUbrCTUIqa0v4O+9IrZa8vgNyTkZx8jxfulmywiO/hbXU1mcVtPEZzg7cpNHzCt5Y5vOGMxJTAjBgkqhkiG9w0BCRUxFgQUvP8u7JLokawTjXXDUH+ninCVeHQwLTAhMAkGBSsOAwIaBQAEFHNNrnEcwDmI3+Bs8AKoZWTCZnW7BAhabv3ynvutiQ==
+ca-passphrase = L5ZP9L56
+hostname =
+ca-p12 = 
+ca-passphrase = 
+skip-server-cert-verify = false
