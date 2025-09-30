@@ -49,7 +49,18 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
     'logConfig', 'logMaxAge', 'logMaxSize', 'maxQueueSize', 'reportUrl', 'transfer', 'upload', 'enable',
     'success', 'message', 'traceId', 'https', 'Cookie', 'Accept', 'Connection', 'Content', 'application',
     'urlencoded', 'Encoding', 'deflate', 'Length', 'JD4iPhone', 'CFNetwork', 'Darwin', 'Language',
-    'shshshfpb', 'shshshfpa', 'shshshfpv', 'unionwsws', 'visitkey', 'sdtoken', 'i4O3XMoj', '7Ctuiguang'
+    'shshshfpb', 'shshshfpa', 'shshshfpv', 'unionwsws', 'visitkey', 'sdtoken', 'i4O3XMoj', '7Ctuiguang',
+    'version', 'JDSaoyisao', 'JDTabBar', 'ConfigCenter', 'TabbarConfig', 'JDService', 'Exception', 'Switch',
+    'mainSwitch', 'service', 'comMarketing', 'mapData', 'infloorErr', 'floorType', 'eventName', 'subItems',
+    'object', 'diamond', 'serviceCats', 'iconId', 'string', 'jumpUrl', 'functionIds', 'content', 'functionId',
+    'resultCode', 'isEmpty', 'hierarchy', 'floorList', 'newValue', 'predicate', 'newRuleKey', 'homeBanner',
+    'templateId', 'myService', 'newbieGift', 'banner', 'recommend', 'universal4', 'universal2', 'universal1',
+    'universal3', 'limitStr', 'Config', 'coreFloor', 'secCoreFloor', 'homeDiamond', 'Degraded', 'Floors',
+    'Template', 'bannerList', 'imageUrl', 'mulMarketing', 'images', 'minLength', 'disable', 'switchType',
+    'locMode', 'm3JMASwitch', 'isOpenCon', 'bizList', 'lbsFrequency', 'launchLoc', 'datasource', 'continuous',
+    'otherAoi', 'logChange', 'resolution', 'errorReport', 'appForeAcc', 'HourlyGo', 'OrderService', 'orderStyle3',
+    'orderStyle2', 'orderStyle1', 'address', 'jdservice', 'enableCart', 'RNDegradeH5', 'preLoadPage',
+    'preloadCount', 'preloadType', 'Monitor', 'searchEnable', 'filterCode'
   ];
   return Array.from(new Set(arr)).filter(id => !blacklist.includes(id));
 }
@@ -102,7 +113,7 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
     console.log('【jd_sku_debug】在 response 文本中找到可能的数字：' + nums.join(','));
     console.log('【jd_sku_debug】在 response 文本中找到可能的字母数字ID：' + alphaNums.join(','));
     $notify('JD SKU 调试', 'response 中可能的 ID', `数字: ${nums.slice(0, 5).join(',')}, 字母数字: ${alphaNums.slice(0, 5).join(',')}`);
-    foundItems = foundItems.concat(nums.map(num => ({ path: 'response.text', value: num })));
+    foundItems = foundItems.concat(nums.filter(num => num.length >= 9).map(num => ({ path: 'response.text', value: num }))); // 过滤短数字
     foundItems = foundItems.concat(alphaNums.map(id => ({ path: 'response.alphanumeric', value: id })));
   }
 
@@ -115,7 +126,7 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
       console.log('【jd_sku_debug】在 request headers 中找到可能的数字：' + nums.join(','));
       console.log('【jd_sku_debug】在 request headers 中找到可能的字母数字ID：' + alphaNums.join(','));
       $notify('JD SKU 调试', 'request headers 中可能的 ID', `数字: ${nums.slice(0, 5).join(',')}, 字母数字: ${alphaNums.slice(0, 5).join(',')}`);
-      foundItems = foundItems.concat(nums.map(num => ({ path: 'request.headers', value: num })));
+      foundItems = foundItems.concat(nums.filter(num => num.length >= 9).map(num => ({ path: 'request.headers', value: num }))); // 过滤短数字
       foundItems = foundItems.concat(alphaNums.map(id => ({ path: 'request.headers.alphanumeric', value: id })));
     }
   }
@@ -161,7 +172,7 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
         console.log('【jd_sku_debug】在 request body 参数中找到数字：' + Array.from(new Set(nums)).slice(0, 6).join(','));
         console.log('【jd_sku_debug】在 request body 参数中找到字母数字ID：' + Array.from(new Set(alphaNums)).slice(0, 6).join(','));
         $notify('JD SKU 调试', 'request body 中可能的 ID', `数字: ${Array.from(new Set(nums)).slice(0, 6).join(',')}, 字母数字: ${Array.from(new Set(alphaNums)).slice(0, 6).join(',')}`);
-        foundItems = foundItems.concat(nums.map(num => ({ path: 'request.body', value: num })));
+        foundItems = foundItems.concat(nums.filter(num => num.length >= 9).map(num => ({ path: 'request.body', value: num })));
         foundItems = foundItems.concat(alphaNums.map(id => ({ path: 'request.body.alphanumeric', value: id })));
       }
     }
@@ -177,7 +188,7 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
       console.log('【jd_sku_debug】在 HTML response 中找到可能的数字：' + nums.join(','));
       console.log('【jd_sku_debug】在 HTML response 中找到可能的字母数字ID：' + alphaNums.join(','));
       $notify('JD SKU 调试', 'HTML response 中可能的 ID', `数字: ${nums.slice(0, 5).join(',')}, 字母数字: ${alphaNums.slice(0, 5).join(',')}`);
-      foundItems = foundItems.concat(nums.map(num => ({ path: 'response.html', value: num })));
+      foundItems = foundItems.concat(nums.filter(num => num.length >= 9).map(num => ({ path: 'response.html', value: num })));
       foundItems = foundItems.concat(alphaNums.map(id => ({ path: 'response.html.alphanumeric', value: id })));
     }
   }
