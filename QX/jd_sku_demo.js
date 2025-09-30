@@ -1,6 +1,5 @@
 /*
-京东商品 skuId 捕捉 Demo
-用法：在京东APP里打开商品详情页，看 QX 通知 & 日志
+京东商品 skuId 捕捉 Demo (增强版)
 */
 
 let body = $response.body;
@@ -8,11 +7,13 @@ let body = $response.body;
 try {
   let obj = JSON.parse(body);
 
-  // 不同接口返回字段可能不一样，常见是 wareId 或 skuId
+  // 多种可能字段
   let skuId = obj?.wareInfo?.basicInfo?.wareId 
            || obj?.wareInfo?.basicInfo?.skuId 
            || obj?.wareId 
-           || obj?.skuId;
+           || obj?.skuId 
+           || obj?.productInfo?.wareId 
+           || obj?.productInfo?.skuId;
 
   if (skuId) {
     $notify("京东商品捕捉成功 ✅", "skuId", skuId.toString());
