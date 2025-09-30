@@ -36,7 +36,7 @@ function findKeysRecursively(obj, keys, path = '') {
   return found;
 }
 
-function findNumbersInText(text, minLen = 6, maxLen = 8) {
+function findNumbersInText(text, minLen = 6, maxLen = 12) {
   let regex = new RegExp('\\b\\d{' + minLen + ',' + maxLen + '}\\b', 'g');
   let arr = text.match(regex) || [];
   return Array.from(new Set(arr));
@@ -45,7 +45,8 @@ function findNumbersInText(text, minLen = 6, maxLen = 8) {
 function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
   let regex = new RegExp('\\b[a-zA-Z0-9]{' + minLen + ',' + maxLen + '}\\b', 'g');
   let arr = text.match(regex) || [];
-  return Array.from(new Set(arr));
+  let blacklist = ['logConfig', 'logMaxAge', 'logMaxSize', 'maxQueueSize', 'reportUrl', 'transfer', 'upload', 'enable', 'success', 'message', 'traceId', 'https'];
+  return Array.from(new Set(arr)).filter(id => !blacklist.includes(id));
 }
 
 // main
@@ -58,7 +59,23 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
 
   let foundItems = [];
 
-  // 1) 尝试解析 responseBody 为 JSON 并搜索常见键
+  // 1) 检查 Cookie 中的 warehistory
+  if ($request && $request.headers && $request.headers['Cookie']) {
+    let cookies = $request.headers['Cookie'];
+    let wareHistoryMatch = cookies.match(/warehistory=([^;]+)/);
+    if (wareHistoryMatch) {
+      let wareHistory = wareHistoryMatch[1].replace(/"/g, '');
+      let skus = findNumbersInText(wareHistory, 6, 12);
+      if (skus.length) {
+        console.log('【jd_sku_debug】在 Cookie warehistory 中找到可能的 SKU：' + skus.join(','));
+        $notify('JD SKU 调试', 'Cookie warehistory 中找到 SKU', skus.slice(0, 5).join(','));
+        $done({ body: responseBody });
+        return;
+      }
+    }
+  }
+
+  // 2) 尝试解析 responseBody 为 JSON 并搜索常见键
   let json = tryParseJSON(responseBody);
   if (json) {
     let jsonExcerpt = JSON.stringify(json, null, 2).substring(0, 2000) + (JSON.stringify(json).length > 2000 ? '...[截断]' : '');
@@ -72,11 +89,11 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
       return;
     }
   } else {
-    console.log('【jd_sku_debug】response 不是纯 JSON（或无法解析）。尝试文本搜索...');
+    console.log('【jd_sku_debug】response 无法解析为 JSON，尝试文本搜索...');
   }
 
-  // 2) 在 response 文本中用正则找数字序列（可能是 sku）
-  let nums = findNumbersInText(responseBody, 6, 8);
+  // 3) 在 response 文本中用正则找数字序列（可能是 sku）
+  let nums = findNumbersInText(responseBody, 6, 12);
   let alphaNums = findAlphanumericIds(responseBody, 6, 12);
   if (nums.length || alphaNums.length) {
     console.log('【jd_sku_debug】在 response 文本中找到可能的数字：' + nums.join(','));
@@ -86,10 +103,10 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
     return;
   }
 
-  // 3) 检查 request headers
+  // 4) 检查 request headers
   if ($request && $request.headers) {
     let headersStr = JSON.stringify($request.headers);
-    let nums = findNumbersInText(headersStr, 6, 8);
+    let nums = findNumbersInText(headersStr, 6, 12);
     let alphaNums = findAlphanumericIds(headersStr, 6, 12);
     if (nums.length || alphaNums.length) {
       console.log('【jd_sku_debug】在 request headers 中找到可能的数字：' + nums.join(','));
@@ -100,7 +117,7 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
     }
   }
 
-  // 4) 检查 request 的 URL query（尤其是 body= 参数）
+  // 5) 检查 request 的 URL query（尤其是 body= 参数）
   try {
     let urlObj = new URL(requestUrl);
     let queryParams = [...urlObj.searchParams.entries()];
@@ -137,7 +154,7 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
           return;
         }
       }
-      let nums = findNumbersInText(dec, 6, 8).concat(findNumbersInText(base64Decoded, 6, 8));
+      let nums = findNumbersInText(dec, 6, 12).concat(findNumbersInText(base64Decoded, 6, 12));
       let alphaNums = findAlphanumericIds(dec, 6, 12).concat(findAlphanumericIds(base64Decoded, 6, 12));
       if (nums.length || alphaNums.length) {
         console.log('【jd_sku_debug】在 request body 参数中找到数字：' + Array.from(new Set(nums)).slice(0, 6).join(','));
@@ -151,9 +168,9 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
     console.log('【jd_sku_debug】解析 request URL 出错：' + e);
   }
 
-  // 5) 检查 HTML response
+  // 6) 检查 HTML response
   if ($response.headers && $response.headers['Content-Type'] && $response.headers['Content-Type'].includes('text/html')) {
-    let nums = findNumbersInText(responseBody, 6, 8);
+    let nums = findNumbersInText(responseBody, 6, 12);
     let alphaNums = findAlphanumericIds(responseBody, 6, 12);
     if (nums.length || alphaNums.length) {
       console.log('【jd_sku_debug】在 HTML response 中找到可能的数字：' + nums.join(','));
@@ -164,7 +181,7 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
     }
   }
 
-  // 6) 最后兜底：打印 response 前 5000 字节
+  // 7) 最后兜底：打印 response 前 5000 字节
   let excerpt = responseBody && responseBody.length > 5000 ? responseBody.substring(0, 5000) + '...[截断]' : responseBody;
   console.log('【jd_sku_debug】未找到明确 skuId，response 前 5000 字节：\n' + excerpt);
   $notify('JD SKU 调试', '未找到 skuId', '已在控制台打印 response 前 5000 字节');
