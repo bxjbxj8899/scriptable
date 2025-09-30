@@ -1,388 +1,332 @@
-/*
-jd_sku_debug.js
-增强型调试脚本：在 response 或 request 的 body 中查找 skuId/wareId 等
-适用于 Quantumult X 的 script-response-body 环境
-版本：2025-09-30
-*/
+// jd_rebate_api.js - 京东返利完整API脚本 for Quantumult X
+// 作者: Grok (基于京东联盟官方API生成)
+// 功能: 查询SKU返利 -> 如果有, 生成个人推广链接 -> 复制 + 通知 + 跳转京粉
 
-let foundItems = [];
+let url = $request.url;
+let skuMatch = url.match(/wareId=([^&]+)/);
+let sku = skuMatch ? skuMatch[1] : null;
 
-function tryParseJSON(str) {
-  try {
-    return JSON.parse(str);
-  } catch (e) {
-    return null;
-  }
+if (!sku) {
+  $notification.post("返利脚本", "未检测到有效SKU", url);
+  $done($response);
 }
 
-function findKeysRecursively(obj, keys, path = '') {
-  let found = [];
-  if (obj && typeof obj === 'object') {
-    if (Array.isArray(obj)) {
-      obj.forEach((item, index) => {
-        found = found.concat(findKeysRecursively(item, keys, `${path}[${index}]`));
-      });
+// 替换为您的信息 (必须!)
+const app_key = "YOUR_APP_KEY_HERE";  // e.g., "dd68*******8a7f11"
+const app_secret = "YOUR_APP_SECRET_HERE";  // e.g., "84a******de141"
+const pid = "YOUR_PID_HERE";  // e.g., "1001_123456_789012" (推广位ID)
+const siteId = "YOUR_SITE_ID_HERE";  // 如果有网站ID，否则用默认或空 (可选，联盟后台获取)
+
+// 纯JS MD5实现 (来源: public domain JS MD5)
+function md5(string) {
+  function RotateLeft(lValue, iShiftBits) {
+    return (lValue << iShiftBits) | (lValue >>> (32 - iShiftBits));
+  }
+  function AddUnsigned(lX, lY) {
+    var lX4, lY4, lX8, lY8, lResult;
+    lX8 = (lX & 0x40000000);
+    lY8 = (lY & 0x40000000);
+    lX4 = (lX & 0x20000000);
+    lY4 = (lY & 0x20000000);
+    lResult = (lX & 0x3FFFFFFF) + (lY & 0x3FFFFFFF);
+    if (lX8 & lY8) {
+      return (lResult ^ 0x80000000 ^ lX4 ^ lY4);
+    }
+    if (lX8 | lY8) {
+      if (lResult & 0x40000000) {
+        return (lResult ^ 0xC0000000 ^ lX4 ^ lY4);
+      } else {
+        return (lResult ^ 0x40000000 ^ lX4 ^ lY4);
+      }
     } else {
-      for (let k in obj) {
-        try {
-          let newPath = path ? path + '.' + k : k;
-          if (keys.includes(k.toLowerCase())) {
-            found.push({ path: newPath, value: obj[k] });
-          } else if (k.toLowerCase().includes('sku') || k.toLowerCase().includes('ware') || k.toLowerCase().includes('product')) {
-            console.log('【jd_sku_debug】发现可能的 SKU 相关键：' + newPath);
-          }
-          found = found.concat(findKeysRecursively(obj[k], keys, newPath));
-        } catch (e) {}
-      }
+      return (lResult ^ lX4 ^ lY4);
     }
   }
-  return found;
-}
-
-function findNumbersInText(text, minLen = 6, maxLen = 12) {
-  let regex = new RegExp('\\b\\d{' + minLen + ',' + maxLen + '}\\b', 'g');
-  let arr = text.match(regex) || [];
-  return Array.from(new Set(arr));
-}
-
-function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
-  let regex = new RegExp('\\b[a-zA-Z0-9]{' + minLen + ',' + maxLen + '}\\b', 'g');
-  let arr = text.match(regex) || [];
-  let blacklist = [
-    'closeNFC', 'openapp', 'jdmobile', 'virtual', 'params', 'category', 'newScan', '360buyimg',
-    'LaunchOption', 'TabBar', 'needRequest', 'enableSound', 'EnableFuzzy', 'enableBackup', 'navTitle',
-    'pointEnable', 'nearbyEnable', 'ErrorMsg', 'btnText', 'Reload', 'subTitle', 'footerText', 'currently',
-    'visitors', 'please', 'verification', 'shopping', 'becomes', 'easier', 'LBSAddress', 'firstPages',
-    'search', 'caller', 'TaroNative', 'templateIds', 'miniapp', 'jumpSource', 'pIdList', 'basicConfig',
-    'feedsTab', 'switch', 'BizVersion', 'MixVersion', 'iPhone14', 'iPhone15', 'iPhone16', 'iPhone13',
-    'iPhone17', 'JDAppManager', 'modules', 'JDDDIMMCU', 'toColorApi', 'useSoaColor', 'useDDMSColor',
-    'useDDMSLog', 'rnChat', 'jdimtext', 'useTrackLog', 'magicFilter', 'useUGCAblum', 'useUGCRecord',
-    'dynamicBtn', 'blackList', 'whiteList', 'allCases', 'record', 'uploadImage', 'frequency',
-    'strategyDay', 'fileDownload', 'sayHello', 'imTrans', 'roamSwitch', 'openIM', 'webSource',
-    'magicTextBtn', 'bottomOrder', 'nwsocket', 'useNWSocket', 'evaluate', 'disableEva', 'config',
-    'protocol', 'graytcp', 'activity', 'imBrowser', 'uiSwitch', 'messageSkin', 'noDisturb',
-    'jdimstyle', 'tracker', 'imnetwork', 'enableDarkUI', 'FA2C19', 'FF0F23', 'F27724', 'FF791A',
-    '0073FF', 'reward', 'richTextLink', 'sendAck', 'rnReplace', 'rnModuleName', 'nativeId',
-    'JDReactUrge', 'monitor', 'privacyPhone', 'mtaMap', 'dbhistory', 'retryLimit', 'mergeCbdata',
-    'excodeReport', 'JDSearch', 'domainName', 'coupon', 'slideModule', 'abMtaTest', 'voiceInput',
-    'isNewStyle', 'dynDownload', 'skuCountSize', 'clearMemory', 'clearType', 'offset', 'paipai',
-    'paimai', 'elinkABTest', 'JDHybrid', '360buy', 'baitiao', 'jcloud', 'yiyaojd', '7fresh',
-    'allianz360', 'healthjd', 'jdallianz', 'jdjygold', 'jingxi', 'jkcsjd', 'toplife', 'isvjcloud',
-    'thunder', 'stores', 'ranking', 'rankingHome', 'h5platform', 'stable', 'lottery', 'giftcard',
-    'tjjt360', 'insurance', 'hunter', '6qMfgJLpI9ZC', 'IiozvTADg', 'introduce', 'wxgrowing',
-    'laputa', 'healthcare', 'center', 'jmiOrderList', 'lzkjdz', 'crmcjyy', 'cjhydz', 'mybbphdyh',
-    'lzkjhyt', 'prodev', 'rebate', 'language', 'compactMode', 'webViewWidth', '0A0A0A', 'F2F3F5',
-    'CEEBF3', 'CF2A1B', 'pNf0pArNw', 'F6D9DD', 'F5F6FA', '2A180E', 'signfree', 'CD0606',
-    'jingdou', 'detail', 'BBE24B', 'EF2020', '4E854D', 'joypark', '97DB51', 'plantearth',
-    'plantBean', '539F51', 'FF9400', 'static', 'wkClearCache', 'alipays', 'medical', 'minner',
-    'ssZipUpgrade', 'dispatchTime', 'UAWebView', 'purchase', 'moreChannelB', 'inspect', 'settle',
-    'subsidy', 'jiaofei', 'recharge', 'jdread', 'scontract', 'package', 'pickcard', 'mygiftcard',
-    'myFuliIndex', 'bankicon', 'lifeTime', 'function', '20strict', '3Bconst', '22noscript',
-    '7Bconst', '3Breturn', 'searchParams', 'append', 'toString', '7Clocation', 'navigator',
-    'userAgent', 'toLowerCase', 'indexOf', '22android', 'filter', '3Dwindow', '2CerrMsg',
-    '2Cextra', '3AJSON', 'stringify', 'XWebView', 'callNative', '2CJSON', '7Bparams', '22router',
-    'routerURL', '3FbizId', '26eventName', '7Bnull', 'routerParam', '7Cvoid', '3Fvoid',
-    '26pageName', '3Dsnapshot', '7Bplugin', '2Caction', '2Cparams', '2Csync', '2CcallbackId',
-    '7Delse', '7BerrorType', '22active', 'window', 'return', '20window', '3Ddocument',
-    'getAttribute', '3DJSON', '3DObject', 'assign', '7Dcatch', '96window', '7Dreturn',
-    '2Cwindow', '22script', '20Array', 'attributes', 'forEach', 'setAttribute', 'textContent',
-    '3Ffunction', '22textarea', 'innerHTML', '22async', '22link', '22stylesheet', 'crossOrigin',
-    '22anonymous', 'appendChild', '3DArray', 'parentNode', 'concat', '7Bhead', '2Cbody',
-    '2CheadCSS', '2CbodyCSS', '2CallCSS', '3Dasync', '20Promise', 'onload', 'onerror',
-    '2Clocation', '7Bextra', '3Dnull', '3DsetTimeout', '20Error', '2C1500', '7Bdocument',
-    '22vconsole', '20void', '2Fstorage', '2Ftower', '2Fbabelnode', '2Feruda', '3Bnull',
-    '2Cdocument', '22complete', 'readyState', '3Adocument', '7Breturn', '2Cnull', '3Dlocation',
-    '3Alocation', '7Dfinally', '3Dawait', '20fetch', 'location', '7Bsignal', 'signal', 'getItem',
-    'removeItem', '3Bwindow', 'setItem', 'replace', '26await', 'length', '3Bbreak', '2Cother',
-    'document', 'customcode', '3Bawait', '7Dconst', '3DPromise', 'resolve', '7BjdRouter',
-    '7BbizId', '2CeventName', '2CpageName', '22snapshot', '2CmapData', '7Bversion', '20DOMParser',
-    '22text', '2Fhtml', 'prefetch', '22preload', 'remove', 'allCSS', 'bodyCSS', 'headCSS',
-    '7Bawait', '7BsetTimeout', '22Promise', '882000ms', '5BPromise', '20hrefList', '22hrefList',
-    '84Promise', '2Cawait', '22undefined', '3Dtypeof', '3Dstylesheet', '5Bhref', '2CArray',
-    'cssText', '22display', '20none', 'replaceChild', 'placeholder', '3BArray', '7BArray',
-    'startsWith', '22true', '22noSeating', 'display', '22none', '22seating', 'visibility',
-    '22hidden', 'firstChild', 'insertBefore', 'removeChild', '20null', '84Toast', '20function',
-    'toastValue', 'position', '3Afixed', '3Bleft', '3Btransform', '3Atranslate', '3Bpadding',
-    '3Bbackground', '3Bcolor', '3Awhite', '3Bdisplay', '3Aflex', '3Balign', '3Acenter',
-    '3Bjustify', '3Aspace', 'between', '3A1000', '3Bborder', 'radius', 'sizing', '3Aborder',
-    '3Bfont', 'weight', '20document', '20toastValue', 'toastElement', '20return', 'A4toast',
-    '20clearToast', 'BAtoast', '20showToast', '20event', '20setTimeout', '202000', '20catch',
-    '20console', '22onclick', '22showToast', '7Bwindow', '3Dfunction', '20config', 'configString',
-    'exposureKey', '20exposure', '20MPing', 'inputs', 'Exposure', '3Bexposure', 'exposure',
-    '22jdapp', '3DString', '20Date', '20isIphone', '22iphone', '22ipad', '22xrender', 'isIphone',
-    'webkit', '26window', 'JDAppUnite', 'postMessage', '7Bmethod', '7BrenderTime', '7Dwindow',
-    '7Bconsole', '2Funify', '22onload', '22window', 'outerHTML', '2CexpireTime', '22save',
-    '22load', '3Awindow', '22html', '22rqID', '3DDate', '60HTTP', 'status', '2CdiffTime',
-    '3AString', '2Cversion', '2CDate', '7Bdata', '22AbortError', '7Berror', '22fetchSSR',
-    '3Belse', '22show', 'errorType', '22position', '3Bbottom', '3A16vw', '3Bwidth', '3Bheight',
-    '22padding', '3Bmargin', '23FF0F23', 'onclick', '8EPromise', 'isEnabled', 'timeout',
-    'reloadType', 'delayTime', 'Unexpected', 'script', 'JDMarket', 'webAddress', 'delivery',
-    'cascade', 'nutrition', 'strategy', 'INSURANCE', 'GIFTCARD', 'PROTOCOL', 'JDReact',
-    'JDReactAfs', 'JDReactDNS', 'except', 'quSerial', 'unification', 'addressCache', 'maxCount',
-    'serviceInfo', 'serverConfig', 'maxVCCount', 'enableAoi', 'enableCache', 'navVCUp',
-    'useSnapView', 'JDOAuth', 'JDOAuthURL', 'kploauth', 'authorize', 'baseinfo', 'useH265Url',
-    'fixConfig', 'iOS161NavFix', 'checkSelect', 'zipUpdate', 'ugcPublish', 'BugFix', 'isFixNavBug',
-    'ddRegister', 'isShowICloud', 'darkMode', 'coverage', 'openLoc', 'distance', 'shanxian',
-    'changchun', 'changgeshi', 'xiamenshi', 'chumiaoxiang', 'shenqiuxian', 'qintongzhen',
-    'biyangxian', 'changlequ', 'mianchixian', 'changanzhen', 'changningqu', 'qianweixian',
-    'xunxian', 'changqingqu', 'changanqu', 'changshazhen', 'senxian', 'changzhouqu',
-    'chashaxian', 'botoushi', 'yulixian', 'changyuanshi', 'shenbeixinqu', 'yanshanxian',
-    'shenhequ', 'guobeizhen', 'changzhishi', 'changxindian', 'yueqingshi', 'junlianxian',
-    'guoyangxian', 'changshouqu', 'changwuxian', 'biyang', 'panyuqu', 'changshou',
-    'changshashi', 'qianxixiang', 'changgouzhen', 'configData', 'contentData', 'serviceId',
-    'voiceConfig', '6c44102d', '7c10082d', '5bc44102d', 'maxTime', 'voiceName', 'xiaoqi',
-    'vadBos', 'accent', 'mandarin', 'vadEos', 'minTime', 'domain', 'asrPtt', 'hostCity',
-    'useNew', 'provinceName', 'provinceId', 'cityName', 'cityId', 'notifyType', 'unplEncode',
-    '25257C', '2525257C', 'unionFilter', 'isAvailble', 'unplSwitch', 'unionSwitch', 'useAbTest',
-    'useunionsdk', 'unionCookie', 'unplMaxAge', 'keplerConfig', 'cpsToSearch', 'cidName',
-    'filterRules', 'jingfen', 'tnFloorId', 'JDEdgeEngine', 'JDEdge', 'exception', 'h5switch',
-    'edgeConfig', 'aiModel', 'tabListCache', 'RedPoint', 'sendReq', 'maxSize', 'FindStyle',
-    'BVideo', 'allowRefresh', 'xjSkuCardMta', 'clickMta', 'TabCache', 'ShortVideo',
-    'xuanjiConfig', 'DegradeReq', 'useNewMapAPI', 'baseInfo', 'PVCounter', 'abTest',
-    '900Style', 'is900UIStyle', 'Touch3D', 'quickaction', 'jumpMode', 'needLogin', 'saoasao',
-    'orderlist', 'vapptype', 'source', 'currentType', 'logistics', 'express', 'appMyChannel',
-    'JDMyJd', 'timeLimiter', 'isClose', 'liveroom', 'webview', 'disableTypes', 'timeOutSec',
-    'poolSize', 'poolOpen', 'poolConfigs', 'forceLoad', 'noTipUI', 'scrollEnable', 'configType',
-    'webViewType', 'heightType', 'webBackColor', 'FFFFFF', 'fixaudio', 'format', 'player',
-    'LiveWebView', 'activityOpen', 'testOpen', 'removeQuery', 'needPreload', 'hPercent',
-    'hasLodingUI', 'closeImage', 'chatKey', 'shieldType1', 'shieldType2', 'debugLogOpen',
-    'config2509', 'config2409', 'config2504', 'config2503', 'config2501', 'windowHeight',
-    'fixScroll', 'useNewUnpl', 'quickPass', 'recQuickPass', 'countReload', 'JDDMNew',
-    'recOptimize', 'roomMutiple', 'xViewShow', 'liveHeadPlay', 'windowsuper', 'JoyWorker',
-    'minipd', 'countdown', 'autoClose', 'Upload', 'switches', 'cartCheckAll', 'cartRemove',
-    'inquiryYddp', 'barterNotice', 'myJingPaiJsf', 'searchOrder', 'cartAdd', 'favoriteList',
-    'priceNotify', 'isAppoint', 'wait4Payment', 'takeCoupon', 'feedAction', 'ptLogin',
-    'findgoodshop', 'storeContent', 'getShopRule', 'asynInteface', 'myOrderInfo',
-    'assembleShop', 'searchWare', 'getFollows', 'newWareList', 'zhangyan1040', 'feedsIndex',
-    'productQuery', 'skuDyInfo', 'platApplePay', 'weixin', 'platDFPay', 'jdPayV2', 'applePay',
-    'platUnionPay', 'genPayId', 'platWapWXPay', 'platWXGzhPay', 'unionPayV2', 'payIndex',
-    'platWXPay', 'platJDPayAcc', 'weixinPay', 'genAppPayId', 'platBestPay', 'bestPay',
-    'qqWalletPay', 'weiXinDFPay', 'octopusPay', 'scanCodePay', 'payDollar', 'globalVerify',
-    'couponSearch', 'hourReachTab', 'nearbyTab', 'oneboxSearch', 'welcomeHome', 'categoryHome',
-    'submitOrder', 'currentOrder', 'wareBusiness', 'NewLogin', 'cartChange', 'configs',
-    'downloadPath', 'device', 'security', 'getUrl', 'platform', 'appname', 'detect', 'ejdwgs',
-    'ctcni6', 'sw4localsig', 'sw4evainfo', 'webcnf', 'report', 'xview2Config', 'switchQuery',
-    'msgConfig', 'hybrid', 'widget', 'XDownloader', 'hotDownload', 'versionCode', 'switchConfig',
-    'langSwitch', 'yiyaoguan', 'huishou', 'aihuishou', 'liveMessage', 'common', 'sendAckWS',
-    'encryptPin', 'useQuic', 'useSEI', 'JDCart', 'Degrade', 'interface', 'cartSwitch',
-    'cartReplace', 'voiceover', 'moreButton', 'accelerate', 'bugfix', 'sheildState', 'inteval',
-    'shortenList', 'JDMiaoSha', 'jdssscache', 'JDCDNDomain', 'storage', 'seckill2022',
-    'JDBizKey', 'seckill', 'newproduct', 'JDCDNSwitch', 'jdbskprice', 'livelink', 'linkSwitch',
-    'feedbackUrl', 'feedbackurl', 'feedback', 'onlineSwitch', 'brDownLoad', 'newRender',
-    'pvDataMta', 'routerTo', 'preHotEngine', 'pkgMd5Enable', 'regexList', 'preDownload',
-    'localDisable', 'intervalTime', 'commentSmile', 'newStyle', 'homeQingdan', 'babelDark',
-    'TTTNewLoad', 'TTTApiColor', 'confirmH5', 'transparent', 'useNewMTab', 'closeFlowMap',
-    'realExpo', 'newIconLabel', 'mpdTnInfo', 'tnInfo', 'taroNative', 'jdrecommend', 'zipMd5',
-    'zipCdnUrl', 'bamboo', 'projects', 'videoSDKAB', 'homeLayoutAB', 'JDShop', 'searchShop',
-    'pageAB', 'coreImg', 'resize', 'h5BlackList', 'isReport', 'liveCartAdCl', 'jdvSmsEnable',
-    'sysEnable', 'applet', 'separator', 'recommendsku', 'cvgsku', 'request', 'reduceEnable',
-    'verifyEnable', 'verify', 'aoipoiEnable', 'deliver', 'takeDown', 'tagEnable', 'fingerEnable',
-    'singleReport', 'langEnable', 'isMaXTime', 'h5ReportV1', 'jdTagEnable', 'isHttp',
-    'SearchKey', 'liveid', 'jdmine', 'nearby', 'cdnURL', 'CDNWarmUp', 'ColorEgg', 'JDUpgrade',
-    'unifyIcon', 'iconSwitch', 'singleWidget', 'useNewFeture', 'JDCronet', '0rOXDNebC',
-    'r8Za2M', '1vNKqEjN', 'KIl66DYjw', 'JQk9lI', 'x0XpG8tTq8z', 'VjH6h1aC', 'vYAK56JX5re',
-    'wloginConfig', 'lbsConfig', 'dialingTask', 'endpoint', 'JDShare', 'jcommSwitch',
-    'createSwitch', 'imagetools', 'channelSort', 'WhatsApp', 'isJKLDegrade', 'JKLRegex',
-    'engRegex', 'cnRegex', 'secKill', 'rating', 'plusMember', 'shangxiang', 'ugcAlbum',
-    'pageSize', 'mediaConfig', 'cameraConfig', 'framerate', 'fileSize', 'quality', 'encode',
-    'bitrate', 'degradeAlbum', 'JDMiaoSong', 'feekback', 'miniProgram', 'myJDHead', 'degrade',
-    'videoExport', 'pagingLoad', 'checkoutEDE', 'regionName', 'iosSystem14', 'redirect',
-    'modulename', 'ishidden', 'typeSceneId', 'playerApm', 'reportMTA', 'PlayerPolicy',
-    'roiEnable', 'avplayer', 'fileCache', 'authReport', 'grayScale', 'aspBlist', 'playUASwitch',
-    'ijkplayer', 'reconnect', 'grayscale', 'cached', 'duration', 'quicpro', 'jdpull', 'jdzbpull',
-    'android', 'EMSGSIZE', 'EPROTOTYPE', 'ENOPROTOOPT', 'EOPNOTSUPP', 'EPFNOSUPPORT',
-    'EAFNOSUPPORT', 'EADDRINUSE', 'EWOULDBLOCK', 'EAGAIN', 'ENOMEM', 'EACCES', 'EFAULT',
-    'EHWPOISON', 'EOWNERDEAD', 'ERFKILL', 'ENOTDIR', 'EISDIR', 'EINVAL', 'ENOSPC', 'EDEADLK',
-    'EDEADLOCK', 'ENAMETOOLONG', 'ENOLCK', 'ENOSYS', 'ENOTEMPTY', 'ENOMSG', 'ECHRNG',
-    'EL2NSYNC', 'EL3HLT', 'EL3RST', 'ELNRNG', 'EUNATCH', 'ENOCSI', 'EL2HLT', 'EXFULL',
-    'ENOANO', 'EBADRQC', 'EBADSLT', 'EBFONT', 'ENOENT', 'ENOSTR', 'ENODATA', 'ENONET',
-    'ENOPKG', 'EREMOTE', 'ENOLINK', 'ESRMNT', 'ENETUNREACH', 'ENETDOWN', 'ECONNABORTED',
-    'ENETRESET', 'ETOOMANYREFS', 'ESHUTDOWN', 'ENOBUFS', 'ECONNRESET', 'ENOTCONN', 'EISCONN',
-    'EPROTO', 'EMULTIHOP', 'EDOTDOT', 'EBADMSG', 'EOVERFLOW', 'ENOTUNIQ', 'EBADFD', 'EREMCHG',
-    'ELIBACC', 'EHOSTDOWN', 'ECONNREFUSED', 'EALREADY', 'EHOSTUNREACH', 'ETIMEDOUT', 'ENAVAIL',
-    'ESTALE', 'EINPROGRESS', 'ENOTNAM', 'EUCLEAN', 'ELIBBAD', 'ELIBSCN', 'ELIBMAX', 'ELIBEXEC',
-    'EILSEQ', 'ERESTART', 'ESTRPIPE', 'EUSERS', 'ENOTSOCK', 'EDESTADDRREQ', 'ENOMEDIUM',
-    'EDQUOT', 'ECANCELED', 'EMEDIUMTYPE', 'EREMOTEIO', 'EISNAM', 'EKEYEXPIRED', 'ENOKEY',
-    'EKEYREJECTED', 'EKEYREVOKED', 'custom', 'ffmpeg', 'storage1', 'storage2', 'storage3',
-    'imgcps', 'imgcps1', 'imgcps2', 'imgcps3', 'statistic', 'dataNum', 'timeSpan',
-    'diagnoEnable', 'dnsvipV6', 'hostList', 'imageV6Flag', 'imageDNS', 'avifConfig',
-    'avifEnable', 'network', 'httpdns', 'safeIPOpt', 'socketopt', 'dnsvip', 'qpngConfig',
-    'moitorEnable', 'Storage', 'ARMakeup', 'maximum', 'minimum', 'preferred', 'enableShake',
-    'business', 'engine', 'spaceLimit', 'JDXView', 'TejiaTabTip', 'bubbletip', 'JDLogin',
-    'defaultSampl', 'SDKCrashFix1', 'busSkinLogo', 'enDarkUrl', 'enLightUrl', 'newconfig',
-    'plogin', 'qtktaHl2k', 'sdkOpen', 'sdkOpenFag', 'saveA2Fix', 'jdxiaojintou', 'jdcloud',
-    'jdworldwide', 'duolabao', 'lending51', 'advisor', 'wuliujie', 'marisa6', 'vipmro',
-    'ztfsec', 'zhzydtest', 'avictc', '91taogu', 'efivestar', 'qqlinkurl', 'timeStamp',
-    'loginDelay', 'hiddenClose', 'gwLogin', 'darkUrl', 'lightUrl', 'code3Enable', 'userSwitch',
-    'fakeCookie', 'active', 'authSwitch', 'unreportlist', 'syncIntvl', 'configVer', 'LogoUrl',
-    'mobilecal', 'oneclick', 'whiteHosts', 'koHosts', 'divide', 'operator', 'preget',
-    'JDPublisher', 'pageSwitch', 'useNewPage', 'VoiceOver', 'isAsync', 'UnusedClass',
-    'maxUpload', 'errorCodes', 'getInformBar', 'couponRule', 'shopwebapi', 'ImageConfig',
-    'imgUASwitch', 'isMemoryCost', 'netUASwitch', 'dlbEnable', 'ishttps', 'explosive',
-    'explData', 'localize', 'TNLoadLimit', 'hotActivity', 'mpdz13', 'compare', 'jingyun',
-    'channel', 'surveys', 'poplist', 'uranus', 'answer', 'airtickets', 'interact', 'itunes',
-    'shopmember', 'shopjump', 'caract', 'membercard', 'allbuy', 'jingcai', 'dolphin',
-    'dolphinId', 'jdbeverage', 'pageKey', 'bizSource', 'xjkJdr', 'rights', 'mobile',
-    'chancode', 'recycling', 'guangdong', 'deepal', 'a02066', 'a02065', 'babelChannel',
-    'parking', 'venderId', 'scaleId', 'appUnid', 'health', 'tenantUnid', 'activityCode',
-    'unstar', 'shopId', 'quanwubaojia', 'mauction', 'authorId', 'kqmfgmrzh7m7', 'hospital',
-    'pethospital', 'inquiry', 'drugskuId', 'typeId', 'scopeId', 'quanqiugou', 'ebayIntro',
-    'jrpmobile', 'btbullion', 'bullion', 'jinTiaoIndex', 'sysCode', 'sourceLink', 'Fmk7PzULD1A',
-    'regPage', 'biguser', 'mirror', 'insCarHome', 'sourceType', 'sccxhb', 'preInquiry',
-    'motherBaby', 'blindBox', 'mpshare', 'action', 'partnerCode', 'productCode', 'JDAZXSMZYL',
-    'classCode', '48aeabc7', 'market', 'pageId', 'random', 'allowance', 'activityId',
-    'landpage', 'iosapp', 'appshare', 'CopyURL', 'jintiao', 'credit', 'account', 'channelName',
-    'ppinspect', 'hideProgress', 'qtggtg', 'rankType', 'contentId', 'charger', 'dataMap',
-    'bpBarter2', 'bpAdword', 'bpGroup', 'bpblank', 'bpblank26', 'bpblank25', 'bpyxlc',
-    'bpSeckill', 'bpkdht', 'bpCertify', 'bpShop', 'bpyxlc14', 'bpnewlx', 'nextFloor',
-    'paddingTop', 'bpnewdsj', 'bpName', '3dPreload', 'isFullScreen', 'pdException', 'fzbSDK',
-    'fzbConfig', 'lockControl', 'userLogin', 'isUpdatedAoi', 'RSADisable', 'update',
-    'JDImageGif', 'imageWidth', 'imageSize', 'gifImageSize', 'imageHeight', 'JDRiskHandle',
-    'loginhandle', 'simplify', 'waterStyle', 'E0D000', '90A040', 'loopHandle', 'timeInterval',
-    'waterMark', 'sdtokentime', 'pushanimated', 'JDCashier', 'xuanji', 'mPaaSABTest',
-    'noLoading', 'XuanjiNotice', 'VideoWXH163', 'novalid', 'middle', 'buriedStr', 'tsabtest',
-    'base64', 'JDDynamic', 'events', 'dynRender', 'dynDisplay', 'oldMtaApi', 'uniformity',
-    'useSSZip', 'features', 'tagViewFix', 'binaryCache', 'jsCache', 'astCache', 'interval',
-    'launch', 'module', 'shareorder', 'attrOptimize', 'reconfirm', 'assetsCache', 'JDMessage',
-    'csNewList', 'redpoint', 'ratecontrol', 'periodtime', 'pushguide', 'popUpTimes',
-    'requestTimes', 'newmessage', 'newskin', 'downgrade', 'listcellTN', 'stationmsgv2',
-    'stationmsgTN', 'FFF0F3', 'preLoad', 'cservice', 'stationmsg', 'smsgctrl', 'LiveActivity',
-    'jdpush', 'msgctrl', 'uploadSwitch', 'mtaMixExpo', 'floatingview', 'verctrl', 'remind',
-    'controlFlag', 'getssstate', 'getinfostate', 'getvmpstate', 'isjailbreak', 'isroot',
-    'gpuinfo', 'xtimestate', '1K2PY8wmEd', 'gfRmSw', 'CpS6EQwzH', 'GERe8eD', 'getvmpaid',
-    'JDBMapModule', 'writeSwitch', 'rtcode', 'dtcode', 'slowTime', 'metricEnable',
-    'perfMonitor', 'diskEnable', 'SocketConfig', 'SocketGoBack', 'JDNewProduct', 'autoReload',
-    'feedSkuStyle', 'secendgo', 'addressFlag', 'uiMode', 'addressType', 'JDPromotion',
-    'PRMExposedAB', 'JDCoupon', 'couponTab', 'preStart', 'JDCDSHOP', 'jdshop', 'videoCache',
-    'codeReset', 'rnRealse', 'homeHotView', 'scoreView', 'manualScroll', 'shopIds', 'shopModel',
-    'rnNewVersion', 'homePage', 'shopHeader', 'useUnifyIcon', 'mobilecms', 'commonConfig',
-    'aniVelocity', 'minUpOffset', 'navBarAlpha', 'target', 'visitSpanDay', 'loadTimeOut',
-    'timeOutDay', 'visitMax', 'tabbar', 'wrtPage', 'forceBackTop', 'memberPage', 'backToRn',
-    'productPage', 'shopDetail', 'pageType', 'webConfig', 'webBounces', 'showLoading',
-    'inspectable', 'newProduct', 'stowShop', 'favorite', 'classify', 'shopMember', 'member',
-    'homeV2', 'avifSwitch', 'globalOn', 'product', 'isOpen', 'shopModule', 'jumpPlans',
-    'isDefault', 'clickSku', 'sourceSku', 'ttt212', 'sourceInfo', 'moduleId', 'entrance',
-    'searchList', 'ttt340', 'ttt341', 'ttt342', 'ttt343', 'cartList', 'ttt352', 'orderList',
-    'ttt353', 'orderDetail', 'ttt354', 'jwebprog', 'hideNavi', 'JDZstd', 'JDStartupMta',
-    'degradeUrl', 'isOpenV3', 'pingou', 'v3JumpUrl', 'checkoutH5', 'wqdeal', 'appredirect',
-    'JDCrash', 'crashType', 'TNUnionFetch', 'jdhome', 'LBSwitcher', 'failure', 'PageOff',
-    'MainImageOff', 'darkSwitch', 'babelDiy', 'systemId', 'businessId', 'subPosition', 'button',
-    'traffic', 'Please', 'SPMEnable', 'hasReward', 'hasNoReward', 'shshshfpx'
-  ];
-  return Array.from(new Set(arr)).filter(id => /^\d+$/.test(id) && id.length >= 9);
-}
-
-(function () {
-  try {
-    let requestUrl = $request.url;
-    let responseBody = $response.body;
-
-    // 检查 Cookie 中的 warehistory
-    if ($request && $request.headers && $request.headers['Cookie']) {
-      let cookies = $request.headers['Cookie'];
-      let wareHistoryMatch = cookies.match(/warehistory=([^;]+)/);
-      if (wareHistoryMatch) {
-        let wareHistory = wareHistoryMatch[1].replace(/"/g, '');
-        let skus = findNumbersInText(wareHistory, 6, 12);
-        if (skus.length) {
-          console.log('【jd_sku_debug】在 Cookie warehistory 中找到可能的 SKU：' + skus.join(','));
-          $notify('JD SKU 调试', 'Cookie warehistory 中找到 SKU', skus.slice(0, 5).join(','));
-          foundItems = foundItems.concat(skus.map(sku => ({ path: 'Cookie.warehistory', value: sku })));
-        }
-      }
+  function F(x, y, z) { return (x & y) | ((~x) & z); }
+  function G(x, y, z) { return (x & z) | (y & (~z)); }
+  function H(x, y, z) { return (x ^ y ^ z); }
+  function I(x, y, z) { return (y ^ (x | (~z))); }
+  function FF(a, b, c, d, x, s, ac) {
+    a = AddUnsigned(a, AddUnsigned(AddUnsigned(F(b, c, d), x), ac));
+    return AddUnsigned(RotateLeft(a, s), b);
+  }
+  function GG(a, b, c, d, x, s, ac) {
+    a = AddUnsigned(a, AddUnsigned(AddUnsigned(G(b, c, d), x), ac));
+    return AddUnsigned(RotateLeft(a, s), b);
+  }
+  function HH(a, b, c, d, x, s, ac) {
+    a = AddUnsigned(a, AddUnsigned(AddUnsigned(H(b, c, d), x), ac));
+    return AddUnsigned(RotateLeft(a, s), b);
+  }
+  function II(a, b, c, d, x, s, ac) {
+    a = AddUnsigned(a, AddUnsigned(AddUnsigned(I(b, c, d), x), ac));
+    return AddUnsigned(RotateLeft(a, s), b);
+  }
+  function ConvertToWordArray(string) {
+    var lWordCount;
+    var lMessageLength = string.length;
+    var lNumberOfWords_temp1 = lMessageLength + 8;
+    var lNumberOfWords_temp2 = (lNumberOfWords_temp1 - (lNumberOfWords_temp1 % 64)) / 64;
+    var lNumberOfWords = (lNumberOfWords_temp2 + 1) * 16;
+    var lWordArray = Array(lNumberOfWords - 1);
+    var lBytePosition = 0;
+    var lByteCount = 0;
+    while (lByteCount < lMessageLength) {
+      lWordCount = (lByteCount - (lByteCount % 4)) / 4;
+      lBytePosition = (lByteCount % 4) * 8;
+      lWordArray[lWordCount] = (lWordArray[lWordCount] | (string.charCodeAt(lByteCount) << lBytePosition));
+      lByteCount++;
     }
-
-    // 检查请求头
-    if ($request && $request.headers) {
-      let headersStr = JSON.stringify($request.headers);
-      let nums = findNumbersInText(headersStr, 6, 12);
-      let alphaNums = findAlphanumericIds(headersStr, 6, 12);
-      if (nums.length || alphaNums.length) {
-        console.log('【jd_sku_debug】在 request headers 中找到可能的数字：' + nums.join(','));
-        console.log('【jd_sku_debug】在 request headers 中找到可能的字母数字ID：' + alphaNums.join(','));
-        $notify('JD SKU 调试', 'request headers 中可能的 ID', `数字: ${nums.slice(0, 5).join(',')}, 字母数字: ${alphaNums.slice(0, 5).join(',')}`);
-        foundItems = foundItems.concat(nums.filter(num => num.length >= 9).map(num => ({ path: 'request.headers', value: num })));
-        foundItems = foundItems.concat(alphaNums.filter(id => /^\d+$/.test(id) && id.length >= 9).map(id => ({ path: 'request.headers.alphanumeric', value: id })));
-      }
+    lWordCount = (lByteCount - (lByteCount % 4)) / 4;
+    lBytePosition = (lByteCount % 4) * 8;
+    lWordArray[lWordCount] = lWordArray[lWordCount] | (0x80 << lBytePosition);
+    lWordArray[lNumberOfWords - 2] = lMessageLength << 3;
+    lWordArray[lNumberOfWords - 1] = lMessageLength >>> 29;
+    return lWordArray;
+  }
+  function WordToHex(lValue) {
+    var WordToHexValue = "", WordToHexValue_temp = "", lByte, lCount;
+    for (lCount = 0; lCount <= 3; lCount++) {
+      lByte = (lValue >>> (lCount * 8)) & 255;
+      WordToHexValue_temp = "0" + lByte.toString(16);
+      WordToHexValue = WordToHexValue + WordToHexValue_temp.substr(WordToHexValue_temp.length - 2, 2);
     }
+    return WordToHexValue;
+  }
+  var x = Array();
+  var k, AA, BB, CC, DD, a, b, c, d;
+  var S11 = 7, S12 = 12, S13 = 17, S14 = 22;
+  var S21 = 5, S22 = 9, S23 = 14, S24 = 20;
+  var S31 = 4, S32 = 11, S33 = 16, S34 = 23;
+  var S41 = 6, S42 = 10, S43 = 15, S44 = 21;
+  string = Utf8Encode(string);
+  x = ConvertToWordArray(string);
+  a = 0x67452301; b = 0xEFCDAB89; c = 0x98BADCFE; d = 0x10325476;
+  for (k = 0; k < x.length; k += 16) {
+    AA = a; BB = b; CC = c; DD = d;
+    a = FF(a, b, c, d, x[k + 0], S11, 0xD76AA478);
+    d = FF(d, a, b, c, x[k + 1], S12, 0xE8C7B756);
+    c = FF(c, d, a, b, x[k + 2], S13, 0x242070DB);
+    b = FF(b, c, d, a, x[k + 3], S14, 0xC1BDCEEE);
+    a = FF(a, b, c, d, x[k + 4], S11, 0xF57C0FAF);
+    d = FF(d, a, b, c, x[k + 5], S12, 0x4787C62A);
+    c = FF(c, d, a, b, x[k + 6], S13, 0xA8304613);
+    b = FF(b, c, d, a, x[k + 7], S14, 0xFD469501);
+    a = FF(a, b, c, d, x[k + 8], S11, 0x698098D8);
+    d = FF(d, a, b, c, x[k + 9], S12, 0x8B44F7AF);
+    c = FF(c, d, a, b, x[k + 10], S13, 0xFFFF5BB1);
+    b = FF(b, c, d, a, x[k + 11], S14, 0x895CD7BE);
+    a = FF(a, b, c, d, x[k + 12], S11, 0x6B901122);
+    d = FF(d, a, b, c, x[k + 13], S12, 0xFD987193);
+    c = FF(c, d, a, b, x[k + 14], S13, 0xA679438E);
+    b = FF(b, c, d, a, x[k + 15], S14, 0x49B40821);
+    a = GG(a, b, c, d, x[k + 1], S21, 0xF61E2562);
+    d = GG(d, a, b, c, x[k + 6], S22, 0xC040B340);
+    c = GG(c, d, a, b, x[k + 11], S23, 0x265E5A51);
+    b = GG(b, c, d, a, x[k + 0], S24, 0xE9B6C7AA);
+    a = GG(a, b, c, d, x[k + 5], S21, 0xD62F105D);
+    d = GG(d, a, b, c, x[k + 10], S22, 0x2441453);
+    c = GG(c, d, a, b, x[k + 15], S23, 0xD8A1E681);
+    b = GG(b, c, d, a, x[k + 4], S24, 0xE7D3FBC8);
+    a = GG(a, b, c, d, x[k + 9], S21, 0x21E1CDE6);
+    d = GG(d, a, b, c, x[k + 14], S22, 0xC33707D6);
+    c = GG(c, d, a, b, x[k + 3], S23, 0xF4D50D87);
+    b = GG(b, c, d, a, x[k + 8], S24, 0x455A14ED);
+    a = GG(a, b, c, d, x[k + 13], S21, 0xA9E3E905);
+    d = GG(d, a, b, c, x[k + 2], S22, 0xFCEFA3F8);
+    c = GG(c, d, a, b, x[k + 7], S23, 0x676F02D9);
+    b = GG(b, c, d, a, x[k + 12], S24, 0x8D2A4C8A);
+    a = HH(a, b, c, d, x[k + 5], S31, 0xFFFA3942);
+    d = HH(d, a, b, c, x[k + 8], S32, 0x8771F681);
+    c = HH(c, d, a, b, x[k + 11], S33, 0x6D9D6122);
+    b = HH(b, c, d, a, x[k + 14], S34, 0xFDE5380C);
+    a = HH(a, b, c, d, x[k + 1], S31, 0xA4BEEA44);
+    d = HH(d, a, b, c, x[k + 4], S32, 0x4BDECFA9);
+    c = HH(c, d, a, b, x[k + 7], S33, 0xF6BB4B60);
+    b = HH(b, c, d, a, x[k + 10], S34, 0xBEBFBC70);
+    a = HH(a, b, c, d, x[k + 13], S31, 0x289B7EC6);
+    d = HH(d, a, b, c, x[k + 0], S32, 0xEAA127FA);
+    c = HH(c, d, a, b, x[k + 3], S33, 0xD4EF3085);
+    b = HH(b, c, d, a, x[k + 6], S34, 0x4881D05);
+    a = HH(a, b, c, d, x[k + 9], S31, 0xD9D4D039);
+    d = HH(d, a, b, c, x[k + 12], S32, 0xE6DB99E5);
+    c = HH(c, d, a, b, x[k + 15], S33, 0x1FA27CF8);
+    b = HH(b, c, d, a, x[k + 2], S34, 0xC4AC5665);
+    a = II(a, b, c, d, x[k + 0], S41, 0xF4292244);
+    d = II(d, a, b, c, x[k + 7], S42, 0x432AFF97);
+    c = II(c, d, a, b, x[k + 14], S43, 0xAB9423A7);
+    b = II(b, c, d, a, x[k + 5], S44, 0xFC93A039);
+    a = II(a, b, c, d, x[k + 12], S41, 0x655B59C3);
+    d = II(d, a, b, c, x[k + 3], S42, 0x8F0CCC92);
+    c = II(c, d, a, b, x[k + 10], S43, 0xFFEFF47D);
+    b = II(b, c, d, a, x[k + 1], S44, 0x85845DD1);
+    a = II(a, b, c, d, x[k + 8], S41, 0x6FA87E4F);
+    d = II(d, a, b, c, x[k + 15], S42, 0xFE2CE6E0);
+    c = II(c, d, a, b, x[k + 6], S43, 0xA3014314);
+    b = II(b, c, d, a, x[k + 13], S44, 0x4E0811A1);
+    a = II(a, b, c, d, x[k + 4], S41, 0xF7537E82);
+    d = II(d, a, b, c, x[k + 11], S42, 0xBD3AF235);
+    c = II(c, d, a, b, x[k + 2], S43, 0x2AD7D2BB);
+    b = II(b, c, d, a, x[k + 9], S44, 0xEB86D391);
+    a = AddUnsigned(a, AA);
+    b = AddUnsigned(b, BB);
+    c = AddUnsigned(c, CC);
+    d = AddUnsigned(d, DD);
+  }
+  var temp = WordToHex(a) + WordToHex(b) + WordToHex(c) + WordToHex(d);
+  return temp.toLowerCase();
+}
+function Utf8Encode(strUni) {
+  var strUtf = strUni.replace(
+    /[\u0080-\u07ff]/g,  
+    function (c) {
+      var cc = c.charCodeAt(0);
+      return String.fromCharCode(0xc0 | cc >> 6, 0x80 | cc & 0x3f);
+    }
+  );
+  strUtf = strUtf.replace(
+    /[\u0800-\uffff]/g,  
+    function (c) {
+      var cc = c.charCodeAt(0);
+      return String.fromCharCode(0xe0 | cc >> 12, 0x80 | cc >> 6 & 0x3F, 0x80 | cc & 0x3f);
+    }
+  );
+  return strUtf;
+}
 
-    // 检查请求查询参数
-    try {
-      let urlObj = new URL(requestUrl);
-      let queryParams = urlObj.searchParams;
-      let queryStr = queryParams.toString();
-      let nums = findNumbersInText(queryStr, 6, 12);
-      let alphaNums = findAlphanumericIds(queryStr, 6, 12);
-      if (nums.length || alphaNums.length) {
-        console.log('【jd_sku_debug】在 request query 参数中找到数字：' + nums.join(','));
-        console.log('【jd_sku_debug】在 request query 参数中找到字母数字ID：' + alphaNums.join(','));
-        $notify('JD SKU 调试', 'request query 中可能的 ID', `数字: ${nums.slice(0, 5).join(',')}, 字母数字: ${alphaNums.slice(0, 5).join(',')}`);
-        foundItems = foundItems.concat(nums.filter(num => num.length >= 9).map(num => ({ path: 'request.query', value: num })));
-        foundItems = foundItems.concat(alphaNums.filter(id => /^\d+$/.test(id) && id.length >= 9).map(id => ({ path: 'request.query.alphanumeric', value: id })));
-      }
+// 生成签名函数
+function generateSign(params) {
+  // 排序 keys (按小写字母序)
+  let sortedKeys = Object.keys(params).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 
-      // 检查 body 参数（可能编码）
-      let bodyParam = queryParams.get('body') || '';
-      if (bodyParam) {
-        let dec = decodeURIComponent(bodyParam);
-        let j1 = tryParseJSON(dec);
-        if (j1) {
-          let found = findKeysRecursively(j1, ['skuid', 'wareid', 'productid', 'itemid', 'goodsid', 'sku', 'id', 'ware', 'item', 'product'].map(k => k.toLowerCase()));
-          if (found.length) {
-            console.log('【jd_sku_debug】在 request.body(JSON) 中找到：', JSON.stringify(found));
-            $notify('JD SKU 调试', 'request.body(JSON) 找到 SKU', JSON.stringify(found.slice(0, 5)));
-            foundItems = foundItems.concat(found);
+  // 构建 sign string
+  let signStr = app_secret;
+  for (let key of sortedKeys) {
+    signStr += key + params[key];
+  }
+  signStr += app_secret;
+
+  // MD5 并大写
+  return md5(signStr).toUpperCase();
+}
+
+// 第一步: 查询返利API (jd.union.open.goods.jingfen.query)
+let timestamp = new Date().toLocaleString('zh-CN', {timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false}).replace(/\//g, '-');
+
+let queryParams = {
+  app_key: app_key,
+  format: 'json',
+  method: 'jd.union.open.goods.jingfen.query',
+  sign_method: 'md5',
+  timestamp: timestamp,
+  v: '1.0',
+  '360buy_param_json': JSON.stringify({
+    goodsReq: {
+      skuIds: sku,  // 单个SKU
+      pageIndex: 1,
+      pageSize: 1,
+      sortName: 'inOrderCount30Days',  // 可选排序
+      sort: 'desc',
+      eliteId: 1  // 1=好券商品 (可选，调整为您的需求)
+    }
+  })
+};
+
+queryParams.sign = generateSign(queryParams);
+
+$httpClient.post({
+  url: 'https://api.jd.com/routerjson',
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  body: Object.keys(queryParams).map(key => key + '=' + encodeURIComponent(queryParams[key])).join('&')
+}, (error, response, data) => {
+  if (error) {
+    $notification.post("返利查询失败", error, "检查网络或API密钥");
+    $done($response);
+    return;
+  }
+
+  let json = JSON.parse(data);
+  let respKey = 'jd_union_open_goods_jingfen_query_response';
+  if (json[respKey] && json[respKey].code === '0') {
+    let result = JSON.parse(json[respKey].query_result);
+    if (result.data && result.data.length > 0) {
+      let commissionShare = result.data[0].commissionInfo.commissionShare;
+      if (commissionShare > 0) {
+        // 有返利! 第二步: 生成推广链接 (jd.union.open.promotion.common.get)
+        let materialUrl = `https://item.jd.com/${sku}.html`;  // 商品链接作为materialId
+
+        let promoTimestamp = new Date().toLocaleString('zh-CN', {timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false}).replace(/\//g, '-');
+
+        let promoParams = {
+          app_key: app_key,
+          format: 'json',
+          method: 'jd.union.open.promotion.common.get',
+          sign_method: 'md5',
+          timestamp: promoTimestamp,
+          v: '1.0',
+          '360buy_param_json': JSON.stringify({
+            promotionCodeReq: {
+              materialId: materialUrl,
+              siteId: siteId || '0',  // 如果无网站，用0或您的
+              positionId: pid,  // 您的推广位ID
+              chainType: 1  // 1=长链, 2=短链 (可选)
+            }
+          })
+        };
+
+        promoParams.sign = generateSign(promoParams);
+
+        $httpClient.post({
+          url: 'https://api.jd.com/routerjson',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: Object.keys(promoParams).map(key => key + '=' + encodeURIComponent(promoParams[key])).join('&')
+        }, (promoError, promoResponse, promoData) => {
+          if (promoError) {
+            $notification.post("生成链接失败", promoError, "手动在京粉转链");
+            $done($response);
+            return;
           }
-        }
-        let nums = findNumbersInText(dec, 6, 12);
-        let alphaNums = findAlphanumericIds(dec, 6, 12);
-        if (nums.length || alphaNums.length) {
-          console.log('【jd_sku_debug】在 request body 参数中找到数字：' + Array.from(new Set(nums)).slice(0, 6).join(','));
-          console.log('【jd_sku_debug】在 request body 参数中找到字母数字ID：' + Array.from(new Set(alphaNums)).slice(0, 6).join(','));
-          $notify('JD SKU 调试', 'request body 中可能的 ID', `数字: ${Array.from(new Set(nums)).slice(0, 6).join(',')}, 字母数字: ${Array.from(new Set(alphaNums)).slice(0, 6).join(',')}`);
-          foundItems = foundItems.concat(nums.filter(num => num.length >= 9).map(num => ({ path: 'request.body', value: num })));
-          foundItems = foundItems.concat(alphaNums.filter(id => /^\d+$/.test(id) && id.length >= 9).map(id => ({ path: 'request.body.alphanumeric', value: id })));
-        }
+
+          let promoJson = JSON.parse(promoData);
+          let promoRespKey = 'jd_union_open_promotion_common_get_response';
+          if (promoJson[promoRespKey] && promoJson[promoRespKey].code === '0') {
+            let promoResult = JSON.parse(promoJson[promoRespKey].get_result);
+            if (promoResult.data && promoResult.data.clickURL) {
+              let promoLink = promoResult.data.clickURL;
+
+              // 复制到剪贴板
+              $clipboard.write(promoLink);
+
+              // 通知
+              $notification.post(
+                "有返利！佣金比例: " + commissionShare + "%",
+                "您的推广链接已复制",
+                promoLink + "\n打开京粉分享赚钱"
+              );
+
+              // 跳转京粉
+              let jingfenScheme = "jingfen://";
+              $openUrl(jingfenScheme);
+            } else {
+              $notification.post("生成链接无数据", JSON.stringify(promoResult), "手动转链");
+            }
+          } else {
+            $notification.post("生成链接错误", json[respKey].code, json[respKey].message || "");
+          }
+          $done($response);
+        });
+      } else {
+        $notification.post("无返利", "SKU: " + sku + ", 佣金: 0%", "直接在京东购买");
+        $done($response);
       }
-    } catch (e) {
-      console.log('【jd_sku_debug】解析 request query 或 body 出错：' + e);
-    }
-
-    // 检查响应体
-    let body = tryParseJSON(responseBody);
-    if (body) {
-      let found = findKeysRecursively(body, ['skuid', 'wareid', 'productid', 'itemid', 'goodsid', 'sku', 'id', 'ware', 'item', 'product'].map(k => k.toLowerCase()));
-      if (found.length) {
-        console.log('【jd_sku_debug】在 response body(JSON) 中找到：', JSON.stringify(found));
-        $notify('JD SKU 调试', 'response body(JSON) 找到 SKU', JSON.stringify(found.slice(0, 5)));
-        foundItems = foundItems.concat(found);
-      }
-    }
-
-    let nums = findNumbersInText(responseBody, 6, 12);
-    let alphaNums = findAlphanumericIds(responseBody, 6, 12);
-    if (nums.length || alphaNums.length) {
-      console.log('【jd_sku_debug】在 response body 中找到数字：' + Array.from(new Set(nums)).slice(0, 6).join(','));
-      console.log('【jd_sku_debug】在 response body 中找到字母数字ID：' + Array.from(new Set(alphaNums)).slice(0, 6).join(','));
-      $notify('JD SKU 调试', 'response body 中可能的 ID', `数字: ${Array.from(new Set(nums)).slice(0, 6).join(',')}, 字母数字: ${Array.from(new Set(alphaNums)).slice(0, 6).join(',')}`);
-      foundItems = foundItems.concat(nums.filter(num => num.length >= 9).map(num => ({ path: 'response.body', value: num })));
-      foundItems = foundItems.concat(alphaNums.filter(id => /^\d+$/.test(id) && id.length >= 9).map(id => ({ path: 'response.body.alphanumeric', value: id })));
-    }
-
-    // 汇总输出
-    if (foundItems.length) {
-      console.log('【jd_sku_debug】汇总找到的 SKU：', JSON.stringify(foundItems, null, 2));
-      $notify('JD SKU 调试', '汇总找到的 SKU', JSON.stringify(foundItems.slice(0, 5), null, 2));
-      $done({ body: responseBody });
-      return;
     } else {
-      console.log('【jd_sku_debug】未找到任何 SKU');
-      $notify('JD SKU 调试', '未找到 SKU', '请检查 API 或日志');
-      $done({ body: responseBody });
+      $notification.post("无返利数据", "SKU: " + sku, "该商品可能不参与活动");
+      $done($response);
     }
-  } catch (e) {
-    console.log('【jd_sku_debug】脚本执行出错：' + e);
-    $notify('JD SKU 调试', '脚本错误', String(e));
-    $done({ body: $response.body });
+  } else {
+    $notification.post("API查询错误", json[respKey] ? json[respKey].code : "未知", json[respKey] ? json[respKey].message : data);
+    $done($response);
   }
-})();
+});
+
+$done($response);  // 异步，继续返回原响应
