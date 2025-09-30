@@ -69,8 +69,7 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
       if (skus.length) {
         console.log('【jd_sku_debug】在 Cookie warehistory 中找到可能的 SKU：' + skus.join(','));
         $notify('JD SKU 调试', 'Cookie warehistory 中找到 SKU', skus.slice(0, 5).join(','));
-        $done({ body: responseBody });
-        return;
+        foundItems = foundItems.concat(skus.map(sku => ({ path: 'Cookie.warehistory', value: sku })));
       }
     }
   }
@@ -81,12 +80,11 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
     let jsonExcerpt = JSON.stringify(json, null, 2).substring(0, 2000) + (JSON.stringify(json).length > 2000 ? '...[截断]' : '');
     console.log('【jd_sku_debug】response JSON 结构：\n' + jsonExcerpt);
     let keys = ['skuid', 'wareid', 'productid', 'itemid', 'goodsid', 'sku', 'id', 'ware', 'item', 'product'].map(k => k.toLowerCase());
-    foundItems = findKeysRecursively(json, keys);
-    if (foundItems.length) {
-      console.log('【jd_sku_debug】在 response JSON 中找到：', foundItems);
-      $notify('JD SKU 调试', '在 response JSON 找到 sku', JSON.stringify(foundItems.slice(0, 5)));
-      $done({ body: responseBody });
-      return;
+    let jsonItems = findKeysRecursively(json, keys);
+    if (jsonItems.length) {
+      console.log('【jd_sku_debug】在 response JSON 中找到：', jsonItems);
+      $notify('JD SKU 调试', '在 response JSON 找到 SKU', JSON.stringify(jsonItems.slice(0, 5)));
+      foundItems = foundItems.concat(jsonItems);
     }
   } else {
     console.log('【jd_sku_debug】response 无法解析为 JSON，尝试文本搜索...');
@@ -99,8 +97,8 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
     console.log('【jd_sku_debug】在 response 文本中找到可能的数字：' + nums.join(','));
     console.log('【jd_sku_debug】在 response 文本中找到可能的字母数字ID：' + alphaNums.join(','));
     $notify('JD SKU 调试', 'response 中可能的 ID', `数字: ${nums.slice(0, 5).join(',')}, 字母数字: ${alphaNums.slice(0, 5).join(',')}`);
-    $done({ body: responseBody });
-    return;
+    foundItems = foundItems.concat(nums.map(num => ({ path: 'response.text', value: num })));
+    foundItems = foundItems.concat(alphaNums.map(id => ({ path: 'response.alphanumeric', value: id })));
   }
 
   // 4) 检查 request headers
@@ -112,8 +110,8 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
       console.log('【jd_sku_debug】在 request headers 中找到可能的数字：' + nums.join(','));
       console.log('【jd_sku_debug】在 request headers 中找到可能的字母数字ID：' + alphaNums.join(','));
       $notify('JD SKU 调试', 'request headers 中可能的 ID', `数字: ${nums.slice(0, 5).join(',')}, 字母数字: ${alphaNums.slice(0, 5).join(',')}`);
-      $done({ body: responseBody });
-      return;
+      foundItems = foundItems.concat(nums.map(num => ({ path: 'request.headers', value: num })));
+      foundItems = foundItems.concat(alphaNums.map(id => ({ path: 'request.headers.alphanumeric', value: id })));
     }
   }
 
@@ -140,18 +138,16 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
         let found = findKeysRecursively(j1, ['skuid', 'wareid', 'productid', 'itemid', 'goodsid', 'sku', 'id', 'ware', 'item', 'product'].map(k => k.toLowerCase()));
         if (found.length) {
           console.log('【jd_sku_debug】在 request.body(JSON) 中找到：', found);
-          $notify('JD SKU 调试', 'request.body(JSON) 找到 sku', JSON.stringify(found.slice(0, 5)));
-          $done({ body: responseBody });
-          return;
+          $notify('JD SKU 调试', 'request.body(JSON) 找到 SKU', JSON.stringify(found.slice(0, 5)));
+          foundItems = foundItems.concat(found);
         }
       }
       if (j2) {
         let found = findKeysRecursively(j2, ['skuid', 'wareid', 'productid', 'itemid', 'goodsid', 'sku', 'id', 'ware', 'item', 'product'].map(k => k.toLowerCase()));
         if (found.length) {
           console.log('【jd_sku_debug】在 request.body(base64->JSON) 中找到：', found);
-          $notify('JD SKU 调试', 'request.body(base64->JSON) 找到 sku', JSON.stringify(found.slice(0, 5)));
-          $done({ body: responseBody });
-          return;
+          $notify('JD SKU 调试', 'request.body(base64->JSON) 找到 SKU', JSON.stringify(found.slice(0, 5)));
+          foundItems = foundItems.concat(found);
         }
       }
       let nums = findNumbersInText(dec, 6, 12).concat(findNumbersInText(base64Decoded, 6, 12));
@@ -160,8 +156,8 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
         console.log('【jd_sku_debug】在 request body 参数中找到数字：' + Array.from(new Set(nums)).slice(0, 6).join(','));
         console.log('【jd_sku_debug】在 request body 参数中找到字母数字ID：' + Array.from(new Set(alphaNums)).slice(0, 6).join(','));
         $notify('JD SKU 调试', 'request body 中可能的 ID', `数字: ${Array.from(new Set(nums)).slice(0, 6).join(',')}, 字母数字: ${Array.from(new Set(alphaNums)).slice(0, 6).join(',')}`);
-        $done({ body: responseBody });
-        return;
+        foundItems = foundItems.concat(nums.map(num => ({ path: 'request.body', value: num })));
+        foundItems = foundItems.concat(alphaNums.map(id => ({ path: 'request.body.alphanumeric', value: id })));
       }
     }
   } catch (e) {
@@ -176,12 +172,20 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
       console.log('【jd_sku_debug】在 HTML response 中找到可能的数字：' + nums.join(','));
       console.log('【jd_sku_debug】在 HTML response 中找到可能的字母数字ID：' + alphaNums.join(','));
       $notify('JD SKU 调试', 'HTML response 中可能的 ID', `数字: ${nums.slice(0, 5).join(',')}, 字母数字: ${alphaNums.slice(0, 5).join(',')}`);
-      $done({ body: responseBody });
-      return;
+      foundItems = foundItems.concat(nums.map(num => ({ path: 'response.html', value: num })));
+      foundItems = foundItems.concat(alphaNums.map(id => ({ path: 'response.html.alphanumeric', value: id })));
     }
   }
 
-  // 7) 最后兜底：打印 response 前 5000 字节
+  // 7) 汇总所有找到的 SKU
+  if (foundItems.length) {
+    console.log('【jd_sku_debug】汇总找到的 SKU：', foundItems);
+    $notify('JD SKU 调试', '汇总找到的 SKU', JSON.stringify(foundItems.slice(0, 5)));
+    $done({ body: responseBody });
+    return;
+  }
+
+  // 8) 最后兜底：打印 response 前 5000 字节
   let excerpt = responseBody && responseBody.length > 5000 ? responseBody.substring(0, 5000) + '...[截断]' : responseBody;
   console.log('【jd_sku_debug】未找到明确 skuId，response 前 5000 字节：\n' + excerpt);
   $notify('JD SKU 调试', '未找到 skuId', '已在控制台打印 response 前 5000 字节');
