@@ -45,7 +45,12 @@ function findNumbersInText(text, minLen = 6, maxLen = 12) {
 function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
   let regex = new RegExp('\\b[a-zA-Z0-9]{' + minLen + ',' + maxLen + '}\\b', 'g');
   let arr = text.match(regex) || [];
-  let blacklist = ['logConfig', 'logMaxAge', 'logMaxSize', 'maxQueueSize', 'reportUrl', 'transfer', 'upload', 'enable', 'success', 'message', 'traceId', 'https'];
+  let blacklist = [
+    'logConfig', 'logMaxAge', 'logMaxSize', 'maxQueueSize', 'reportUrl', 'transfer', 'upload', 'enable',
+    'success', 'message', 'traceId', 'https', 'Cookie', 'Accept', 'Connection', 'Content', 'application',
+    'urlencoded', 'Encoding', 'deflate', 'Length', 'JD4iPhone', 'CFNetwork', 'Darwin', 'Language',
+    'shshshfpb', 'shshshfpa', 'shshshfpv', 'unionwsws', 'visitkey', 'sdtoken', 'i4O3XMoj', '7Ctuiguang'
+  ];
   return Array.from(new Set(arr)).filter(id => !blacklist.includes(id));
 }
 
@@ -179,8 +184,8 @@ function findAlphanumericIds(text, minLen = 6, maxLen = 12) {
 
   // 7) 汇总所有找到的 SKU
   if (foundItems.length) {
-    console.log('【jd_sku_debug】汇总找到的 SKU：', foundItems);
-    $notify('JD SKU 调试', '汇总找到的 SKU', JSON.stringify(foundItems.slice(0, 5)));
+    console.log('【jd_sku_debug】汇总找到的 SKU：', JSON.stringify(foundItems, null, 2));
+    $notify('JD SKU 调试', '汇总找到的 SKU', JSON.stringify(foundItems.slice(0, 5), null, 2));
     $done({ body: responseBody });
     return;
   }
