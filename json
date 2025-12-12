@@ -1,0 +1,67 @@
+{
+  "sites": [
+    {
+      "key": "drama_api",
+      "name": "短剧聚合源",
+      "type": 1,
+      "api": "https://example.com/api.php",
+      "searchable": 1,
+      "quickSearch": 1,
+      "filterable": 1,
+      "ext": {
+        "page": 1,
+        "pagecount": 10,
+        "limit": 20,
+        "total": 200,
+        "class": [
+          { "type_id": 1, "type_name": "电影" },
+          { "type_id": 2, "type_name": "电视剧" },
+          { "type_id": 3, "type_name": "动漫" },
+          { "type_id": 4, "type_name": "综艺" },
+          { "type_id": 5, "type_name": "现代都市" },
+          { "type_id": 6, "type_name": "古装仙侠" },
+          { "type_id": 7, "type_name": "重生民国" },
+          { "type_id": 8, "type_name": "搞笑反转" },
+          { "type_id": 9, "type_name": "穿越重生" }
+        ],
+        "list": [
+          {
+            "vod_id": 4865,
+            "vod_name": "被车撞后，我觉醒了透视赌石异能",
+            "type_name": "现代都市",
+            "vod_remarks": "已完结",
+            "vod_play_from": "mtm3u8"
+          },
+          {
+            "vod_id": 4864,
+            "vod_name": "被前妻抛弃后，我开挂了",
+            "type_name": null,
+            "vod_remarks": "连载中",
+            "vod_play_from": "mtm3u8"
+          },
+          {
+            "vod_id": 4863,
+            "vod_name": "修仙奶爸在都市",
+            "type_name": "现代都市",
+            "vod_remarks": "连载中",
+            "vod_play_from": "mtm3u8"
+          },
+          {
+            "vod_id": 4862,
+            "vod_name": "全球动员让我成仙",
+            "type_name": "古装仙侠",
+            "vod_remarks": "连载中",
+            "vod_play_from": "mtm3u8"
+          },
+          {
+            "vod_id": 4861,
+            "vod_name": "第三调解室",
+            "type_name": "大陆综艺",
+            "vod_remarks": "更新至第202420号",
+            "vod_play_from": "mtm3u8"
+          }
+        ]
+      }
+    }
+  ]
+}
