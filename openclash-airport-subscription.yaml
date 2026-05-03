@@ -50,7 +50,7 @@ tun:
 
 proxies: []
 
-# 分享给别人时，只需要替换下面的 url 订阅链接。
+# 1. 订阅提供者配置
 proxy-providers:
   Airport:
     type: http
@@ -64,11 +64,25 @@ proxy-providers:
       url: https://www.gstatic.com/generate_204
       interval: 300
 
+  Airport2: # 这是新增的第二个机场
+    type: http
+    url: "这里填入第二个机场的订阅链接" # <--- 请修改这里
+    interval: 86400
+    path: ./proxy_providers/Airport2.yaml # 路径文件名已区分
+    proxy: DIRECT
+    exclude-type: "macc"
+    health-check:
+      enable: true
+      url: https://www.gstatic.com/generate_204
+      interval: 300
+
+# 2. 策略组配置
 proxy-groups:
   - name: PROXY
     type: select
     use:
       - Airport
+      - Airport2 # 将第二个机场加入选择列表
     proxies:
       - AUTO
       - DIRECT
@@ -77,9 +91,11 @@ proxy-groups:
     type: url-test
     use:
       - Airport
+      - Airport2 # 将第二个机场加入自动测速
     url: https://www.gstatic.com/generate_204
     interval: 300
     tolerance: 50
+
 
 dns:
   enable: true
