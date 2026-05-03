@@ -96,7 +96,6 @@ proxy-groups:
     interval: 300
     tolerance: 50
 
-
 dns:
   enable: true
   listen: 0.0.0.0:1053
