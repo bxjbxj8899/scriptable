@@ -28,50 +28,72 @@ Anchor_DN: &Anchor_DN {type: http, interval: 86400, behavior: domain, format: mr
 # Clash Mi 热点共享专用覆写
 # 用途：让其他设备连接你的手机热点后自动通过 Clash 科学上网
 
+# =========================
+# Seven1_Clashmi_Full_Optimized
+# 手机热点共享 + Clash Mi 最优补丁
+# 适用于你现有完整配置，直接替换“核心配置”部分即可
+# =========================
+
+mixed-port: 7890
 allow-lan: true
 bind-address: "*"
-mixed-port: 7890
+mode: rule
+
+tcp-concurrent: true
+unified-delay: true
+log-level: error
+ipv6: false
 
 tun:
   enable: true
-  stack: system          # Android 上推荐 system，更稳定
+  stack: system
   auto-route: true
   auto-redirect: true
   strict-route: true
   dns-hijack:
     - 0.0.0.0:53
-
-# 可选优化
-tcp-concurrent: true
-unified-delay: true
-ipv6: false
-log-level: error
+  endpoint-independent-nat: true
 
 sniffer:
   enable: true
   override-destination: true
   sniff:
-    TLS: {ports: [443, 8443]}
-    HTTP: {ports: [80, 8080-8880], override-destination: true}
-    QUIC: {ports: [443]}
+    TLS:
+      ports: [443, 8443]
+    HTTP:
+      ports: [80, 8080-8880]
+      override-destination: true
+    QUIC:
+      ports: [443]
 
 dns:
   enable: true
   listen: 0.0.0.0:7874
-  ipv6: true
+  ipv6: false
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
-  prefer-h3: true                                                       # 提升移动端解析速度
-  default-nameserver: [114.114.114.114, 223.5.5.5]
+  prefer-h3: true
+
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+
   nameserver:
     - https://dns.alidns.com/dns-query
     - https://doh.pub/dns-query
-  fake-ip-filter:
-    - '*.lan'
-    - 'rule-set:cn_domain'
-    - 'msftconnecttest.com'
-    - 'connectivitycheck.platform.hicloud.com'
 
+  proxy-server-nameserver:
+    - https://1.1.1.1/dns-query
+    - https://dns.google/dns-query
+
+  fake-ip-filter:
+    - "*.lan"
+    - "*.local"
+    - "rule-set:cn_domain"
+    - "msftconnecttest.com"
+    - "connectivitycheck.gstatic.com"
+    - "connectivitycheck.platform.hicloud.com"
+    - "localhost.ptlogin2.qq.com"
 # ※※※※※※※※※※※※※※※ 代理策略组 ※※※※※※※※※※※※※※※
 proxy-groups:
   - {name: 一键代理, type: select, proxies: [香港故转, 台湾故转, 日本故转, 韩国故转, 新加坡故转, 美国故转, 欧洲故转, 香港自动, 台湾自动, 日本自动, 韩国自动, 新加坡自动, 美国自动, 欧洲自动, 香港手动, 台湾手动, 日本手动, 韩国手动, 新加坡手动, 美国手动, 欧洲手动, 其他手动, DIRECT, REJECT], icon: https://github.com/Seven1echo/Yaml/raw/main/icons/Rocket.png}
@@ -125,6 +147,15 @@ proxy-groups:
 
 # ※※※※※※※※※※※※※※※ 规则匹配 ※※※※※※※※※※※※※※※
 rules:
+  - DOMAIN-SUFFIX,gemini.google.com,ChatGPT
+  - DOMAIN-SUFFIX,gemini.com,ChatGPT
+  - DOMAIN-SUFFIX,bard.google.com,ChatGPT
+  - DOMAIN-SUFFIX,makersuite.google.com,ChatGPT
+  - DOMAIN-SUFFIX,aistudio.google.com,ChatGPT
+  - DOMAIN-SUFFIX,alkalimakersuite-pa.clients6.google.com,ChatGPT
+  - DOMAIN-SUFFIX,proactivebackend-pa.googleapis.com,ChatGPT
+  - DOMAIN-SUFFIX,generativelanguage.googleapis.com,ChatGPT
+  - DOMAIN-SUFFIX,ai.google.dev,ChatGPT
   - DOMAIN-SUFFIX,gemini.com,一键代理
   - RULE-SET,ads_domain,广告拦截
   - RULE-SET,private_ip,DIRECT,no-resolve
