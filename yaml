@@ -156,7 +156,6 @@ rules:
   - DOMAIN-SUFFIX,proactivebackend-pa.googleapis.com,ChatGPT
   - DOMAIN-SUFFIX,generativelanguage.googleapis.com,ChatGPT
   - DOMAIN-SUFFIX,ai.google.dev,ChatGPT
-  - DOMAIN-SUFFIX,gemini.com,一键代理
   - RULE-SET,ads_domain,广告拦截
   - RULE-SET,private_ip,DIRECT,no-resolve
   - RULE-SET,private_domain,DIRECT
