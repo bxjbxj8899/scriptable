@@ -25,22 +25,27 @@ Anchor_IP: &Anchor_IP {type: http, interval: 86400, behavior: ipcidr, format: mr
 Anchor_DN: &Anchor_DN {type: http, interval: 86400, behavior: domain, format: mrs}
 
 # ※※※※※※※※※※※※※※※ 核心配置 ※※※※※※※※※※※※※※※
-mixed-port: 7893
-mode: rule
+# Clash Mi 热点共享专用覆写
+# 用途：让其他设备连接你的手机热点后自动通过 Clash 科学上网
+
 allow-lan: true
-tcp-concurrent: true
-unified-delay: true
-log-level: info
-ipv6: true
+bind-address: "*"
+mixed-port: 7890
 
 tun:
   enable: true
-  stack: system                                                         # Clashmi 在 Android 端用 system 栈最稳
+  stack: system          # Android 上推荐 system，更稳定
   auto-route: true
   auto-redirect: true
   strict-route: true
-  dns-hijack: [0.0.0.0:53]
-  endpoint-independent-nat: true
+  dns-hijack:
+    - 0.0.0.0:53
+
+# 可选优化
+tcp-concurrent: true
+unified-delay: true
+ipv6: false
+log-level: error
 
 sniffer:
   enable: true
